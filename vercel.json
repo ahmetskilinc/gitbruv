@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "app/api/git/*/route.ts": {
+      "maxDuration": 120,
+      "memory": 1024
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/git/(.*)",
+      "headers": {
+        "x-vercel-max-body-length": "104857600"
+      }
+    }
+  ]
+}
