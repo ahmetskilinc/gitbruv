@@ -204,15 +204,23 @@ async function handleUploadPack(fs: any, gitdir: string, body: Buffer): Promise<
 }
 
 async function handleReceivePack(fs: any, gitdir: string, body: Buffer): Promise<Buffer> {
+  console.log("[ReceivePack] Starting, body length:", body.length);
+
   const packStart = body.indexOf(Buffer.from("PACK"));
+  console.log("[ReceivePack] PACK header at:", packStart);
+
   if (packStart === -1) {
+    console.log("[ReceivePack] No PACK header found");
     return Buffer.from("000eunpack ok\n0000");
   }
 
   const commandSection = body.slice(0, packStart);
   const packData = body.slice(packStart);
+  console.log("[ReceivePack] Command section length:", commandSection.length, "Pack data length:", packData.length);
 
   const lines = parsePktLines(commandSection);
+  console.log("[ReceivePack] Parsed lines:", lines);
+
   const updates: { oldOid: string; newOid: string; ref: string }[] = [];
 
   for (const line of lines) {
@@ -221,27 +229,37 @@ async function handleReceivePack(fs: any, gitdir: string, body: Buffer): Promise
       updates.push({ oldOid: match[1], newOid: match[2], ref: match[3].replace("\0", "").split(" ")[0] });
     }
   }
+  console.log("[ReceivePack] Updates:", updates);
 
   try {
-    const packPath = `${gitdir}/objects/pack/pack-temp.pack`;
-    const packDir = `${gitdir}/objects/pack`;
+    const packPath = "/objects/pack/pack-temp.pack";
+    const packDir = "/objects/pack";
+    const objectsDir = "/objects";
 
-    await fs.promises.mkdir(packDir, { recursive: true }).catch(() => {});
+    console.log("[ReceivePack] Creating directories...");
+    await fs.promises.mkdir(objectsDir, { recursive: true }).catch((e: Error) => console.log("mkdir objects error:", e.message));
+    await fs.promises.mkdir(packDir, { recursive: true }).catch((e: Error) => console.log("mkdir pack error:", e.message));
+
+    console.log("[ReceivePack] Writing pack file to:", packPath);
     await fs.promises.writeFile(packPath, packData);
 
-    const { oids } = await git.indexPack({ fs, dir: gitdir, gitdir, filepath: "objects/pack/pack-temp.pack" });
-    console.log("Indexed objects:", oids.length);
+    console.log("[ReceivePack] Calling indexPack...");
+    const result = await git.indexPack({ fs, dir: "/", gitdir: "/", filepath: "objects/pack/pack-temp.pack" });
+    console.log("[ReceivePack] indexPack result:", result);
 
     await fs.promises.unlink(packPath).catch(() => {});
 
+    console.log("[ReceivePack] Writing refs...");
     for (const update of updates) {
       const refPath = update.ref.startsWith("refs/") ? update.ref : `refs/heads/${update.ref}`;
+      console.log("[ReceivePack] Writing ref:", refPath, "->", update.newOid);
+
       if (update.newOid === "0".repeat(40)) {
-        await fs.promises.unlink(`${gitdir}/${refPath}`).catch(() => {});
+        await fs.promises.unlink(`/${refPath}`).catch(() => {});
       } else {
-        const refDir = refPath.split("/").slice(0, -1).join("/");
-        await fs.promises.mkdir(`${gitdir}/${refDir}`, { recursive: true }).catch(() => {});
-        await fs.promises.writeFile(`${gitdir}/${refPath}`, update.newOid + "\n");
+        const refDir = "/" + refPath.split("/").slice(0, -1).join("/");
+        await fs.promises.mkdir(refDir, { recursive: true }).catch(() => {});
+        await fs.promises.writeFile(`/${refPath}`, update.newOid + "\n");
       }
     }
 
@@ -250,17 +268,18 @@ async function handleReceivePack(fs: any, gitdir: string, body: Buffer): Promise
       response.push(`ok ${update.ref}`);
     }
 
-    let result = "";
+    let responseStr = "";
     for (const line of response) {
       const pktLine = line + "\n";
       const len = (pktLine.length + 4).toString(16).padStart(4, "0");
-      result += len + pktLine;
+      responseStr += len + pktLine;
     }
-    result += "0000";
+    responseStr += "0000";
 
-    return Buffer.from(result);
+    console.log("[ReceivePack] Success, response:", response);
+    return Buffer.from(responseStr);
   } catch (err) {
-    console.error("Receive pack error:", err);
+    console.error("[ReceivePack] Error:", err);
     const errMsg = `ng unpack error ${err}\n`;
     const len = (errMsg.length + 4).toString(16).padStart(4, "0");
     return Buffer.from(len + errMsg + "0000");
