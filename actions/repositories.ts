@@ -8,11 +8,7 @@ import { revalidatePath } from "next/cache";
 import git from "isomorphic-git";
 import { createR2Fs, getRepoPrefix } from "@/lib/r2-fs";
 
-export async function createRepository(data: {
-  name: string;
-  description?: string;
-  visibility: "public" | "private";
-}) {
+export async function createRepository(data: { name: string; description?: string; visibility: "public" | "private" }) {
   const session = await getSession();
   if (!session?.user) {
     throw new Error("Unauthorized");
@@ -25,10 +21,7 @@ export async function createRepository(data: {
   }
 
   const existing = await db.query.repositories.findFirst({
-    where: and(
-      eq(repositories.ownerId, session.user.id),
-      eq(repositories.name, normalizedName)
-    ),
+    where: and(eq(repositories.ownerId, session.user.id), eq(repositories.name, normalizedName)),
   });
 
   if (existing) {
@@ -49,11 +42,14 @@ export async function createRepository(data: {
   const fs = createR2Fs(repoPrefix);
 
   await fs.writeFile("/HEAD", "ref: refs/heads/main\n");
-  await fs.writeFile("/config", `[core]
+  await fs.writeFile(
+    "/config",
+    `[core]
 \trepositoryformatversion = 0
 \tfilemode = true
 \tbare = true
-`);
+`
+  );
   await fs.writeFile("/description", "Unnamed repository; edit this file to name the repository.\n");
 
   const username = (session.user as { username?: string }).username;
@@ -73,10 +69,7 @@ export async function getRepository(owner: string, name: string) {
   }
 
   const repo = await db.query.repositories.findFirst({
-    where: and(
-      eq(repositories.ownerId, user.id),
-      eq(repositories.name, name)
-    ),
+    where: and(eq(repositories.ownerId, user.id), eq(repositories.name, name)),
   });
 
   if (!repo) {
@@ -114,12 +107,7 @@ export async function getUserRepositories(username: string) {
   const isOwner = session?.user?.id === user.id;
 
   const repos = await db.query.repositories.findMany({
-    where: isOwner
-      ? eq(repositories.ownerId, user.id)
-      : and(
-          eq(repositories.ownerId, user.id),
-          eq(repositories.visibility, "public")
-        ),
+    where: isOwner ? eq(repositories.ownerId, user.id) : and(eq(repositories.ownerId, user.id), eq(repositories.visibility, "public")),
     orderBy: [desc(repositories.updatedAt)],
   });
 
@@ -149,8 +137,7 @@ export async function deleteRepository(repoId: string) {
 
   try {
     await r2DeletePrefix(repoPrefix);
-  } catch {
-  }
+  } catch {}
 
   await db.delete(repositories).where(eq(repositories.id, repoId));
 
@@ -159,12 +146,7 @@ export async function deleteRepository(repoId: string) {
   revalidatePath("/");
 }
 
-export async function getRepoFileTree(
-  owner: string,
-  repoName: string,
-  branch: string,
-  dirPath: string = ""
-) {
+export async function getRepoFileTree(owner: string, repoName: string, branch: string, dirPath: string = "") {
   const user = await db.query.users.findFirst({
     where: eq(users.username, owner),
   });
@@ -214,12 +196,36 @@ export async function getRepoFileTree(
       }
     }
 
-    const entries = targetTree.map((entry) => ({
-      name: entry.path,
-      type: entry.type as "blob" | "tree",
-      oid: entry.oid,
-      path: dirPath ? `${dirPath}/${entry.path}` : entry.path,
-    }));
+    const entries = await Promise.all(
+      targetTree.map(async (entry) => {
+        const filePath = dirPath ? `${dirPath}/${entry.path}` : entry.path;
+        let lastCommit: { message: string; timestamp: number } | null = null;
+
+        try {
+          const fileCommits = await git.log({
+            fs,
+            gitdir: "/",
+            ref: branch,
+            filepath: filePath,
+            depth: 1,
+          });
+          if (fileCommits.length > 0) {
+            lastCommit = {
+              message: fileCommits[0].commit.message.split("\n")[0],
+              timestamp: fileCommits[0].commit.committer.timestamp * 1000,
+            };
+          }
+        } catch {}
+
+        return {
+          name: entry.path,
+          type: entry.type as "blob" | "tree",
+          oid: entry.oid,
+          path: filePath,
+          lastCommit,
+        };
+      })
+    );
 
     entries.sort((a, b) => {
       if (a.type === "tree" && b.type !== "tree") return -1;
@@ -237,12 +243,7 @@ export async function getRepoFileTree(
   }
 }
 
-export async function getRepoFile(
-  owner: string,
-  repoName: string,
-  branch: string,
-  filePath: string
-) {
+export async function getRepoFile(owner: string, repoName: string, branch: string, filePath: string) {
   const user = await db.query.users.findFirst({
     where: eq(users.username, owner),
   });
