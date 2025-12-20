@@ -358,7 +358,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
       }
 
-      const repoPrefix = getRepoPrefix(owner.id, repoName);
+      const repoPrefix = getRepoPrefix(owner.id, `${repoName}.git`);
       const fs = createR2Fs(repoPrefix);
 
       const refs = await getRefsAdvertisement(fs, "/", serviceQuery);
@@ -428,7 +428,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const body = Buffer.from(await request.arrayBuffer());
-  const repoPrefix = getRepoPrefix(owner.id, repoName);
+  const repoPrefix = getRepoPrefix(owner.id, `${repoName}.git`);
   const fs = createR2Fs(repoPrefix);
 
   let response: Buffer;
