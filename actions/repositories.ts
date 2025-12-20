@@ -560,21 +560,19 @@ export type FileEntry = {
   lastCommit: { message: string; timestamp: number } | null;
 };
 
-async function fetchGitData(userId: string, repoName: string, defaultBranch: string) {
+async function fetchFileTree(userId: string, repoName: string, defaultBranch: string) {
   const repoPrefix = getRepoPrefix(userId, `${repoName}.git`);
   const fs = createR2Fs(repoPrefix);
 
   let files: FileEntry[] = [];
   let isEmpty = true;
-  let readmeContent: string | null = null;
   let branches: string[] = [];
-  let commitCount = 0;
+  let readmeOid: string | null = null;
 
   try {
-    const [branchList, commits] = await Promise.all([git.listBranches({ fs, gitdir: "/" }), git.log({ fs, gitdir: "/", ref: defaultBranch })]);
+    const [branchList, commits] = await Promise.all([git.listBranches({ fs, gitdir: "/" }), git.log({ fs, gitdir: "/", ref: defaultBranch, depth: 1 })]);
 
     branches = branchList;
-    commitCount = commits.length;
 
     if (commits.length > 0) {
       isEmpty = false;
@@ -614,22 +612,57 @@ async function fetchGitData(userId: string, repoName: string, defaultBranch: str
 
       const readmeEntry = tree.find((e) => e.path.toLowerCase() === "readme.md" && e.type === "blob");
       if (readmeEntry) {
-        const { blob } = await git.readBlob({ fs, gitdir: "/", oid: readmeEntry.oid });
-        readmeContent = new TextDecoder("utf-8").decode(blob);
+        readmeOid = readmeEntry.oid;
       }
     }
   } catch (err: unknown) {
     const error = err as { code?: string };
     if (error.code !== "NotFoundError") {
-      console.error("fetchGitData error:", err);
+      console.error("fetchFileTree error:", err);
     }
   }
 
-  return { files, isEmpty, readmeContent, branches, commitCount };
+  return { files, isEmpty, branches, readmeOid };
 }
 
-const getCachedGitData = (owner: string, repoName: string, userId: string, defaultBranch: string) =>
-  unstable_cache(() => fetchGitData(userId, repoName, defaultBranch), [`git-data`, owner, repoName], {
+async function fetchReadme(userId: string, repoName: string, readmeOid: string) {
+  const repoPrefix = getRepoPrefix(userId, `${repoName}.git`);
+  const fs = createR2Fs(repoPrefix);
+
+  try {
+    const { blob } = await git.readBlob({ fs, gitdir: "/", oid: readmeOid });
+    return new TextDecoder("utf-8").decode(blob);
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCommitCount(userId: string, repoName: string, defaultBranch: string) {
+  const repoPrefix = getRepoPrefix(userId, `${repoName}.git`);
+  const fs = createR2Fs(repoPrefix);
+
+  try {
+    const commits = await git.log({ fs, gitdir: "/", ref: defaultBranch });
+    return commits.length;
+  } catch {
+    return 0;
+  }
+}
+
+const getCachedFileTree = (owner: string, repoName: string, userId: string, defaultBranch: string) =>
+  unstable_cache(() => fetchFileTree(userId, repoName, defaultBranch), [`file-tree`, owner, repoName], {
+    tags: [`repo:${owner}/${repoName}`],
+    revalidate: 3600,
+  })();
+
+const getCachedReadme = (owner: string, repoName: string, userId: string, readmeOid: string) =>
+  unstable_cache(() => fetchReadme(userId, repoName, readmeOid), [`readme`, owner, repoName, readmeOid], {
+    tags: [`repo:${owner}/${repoName}`],
+    revalidate: 3600,
+  })();
+
+const getCachedCommitCount = (owner: string, repoName: string, userId: string, defaultBranch: string) =>
+  unstable_cache(() => fetchCommitCount(userId, repoName, defaultBranch), [`commit-count`, owner, repoName], {
     tags: [`repo:${owner}/${repoName}`],
     revalidate: 3600,
   })();
@@ -649,10 +682,10 @@ export async function getRepoPageData(owner: string, repoName: string) {
     return null;
   }
 
-  const [starCountResult, starredResult, gitData] = await Promise.all([
+  const [starCountResult, starredResult, fileTreeData] = await Promise.all([
     db.select({ count: count() }).from(stars).where(eq(stars.repositoryId, repo.id)),
     session?.user ? db.query.stars.findFirst({ where: and(eq(stars.userId, session.user.id), eq(stars.repositoryId, repo.id)) }) : Promise.resolve(null),
-    getCachedGitData(owner, repoName, user.id, repo.defaultBranch),
+    getCachedFileTree(owner, repoName, user.id, repo.defaultBranch),
   ]);
 
   const starCount = starCountResult[0]?.count ?? 0;
@@ -666,7 +699,25 @@ export async function getRepoPageData(owner: string, repoName: string) {
       starCount,
       starred,
     },
-    ...gitData,
+    ...fileTreeData,
     isOwner,
   };
+}
+
+export async function getRepoReadme(owner: string, repoName: string, readmeOid: string) {
+  const user = await db.query.users.findFirst({ where: eq(users.username, owner) });
+  if (!user) return null;
+  return getCachedReadme(owner, repoName, user.id, readmeOid);
+}
+
+export async function getRepoCommitCountCached(owner: string, repoName: string) {
+  const user = await db.query.users.findFirst({ where: eq(users.username, owner) });
+  if (!user) return 0;
+
+  const repo = await db.query.repositories.findFirst({
+    where: and(eq(repositories.ownerId, user.id), eq(repositories.name, repoName)),
+  });
+  if (!repo) return 0;
+
+  return getCachedCommitCount(owner, repoName, user.id, repo.defaultBranch);
 }

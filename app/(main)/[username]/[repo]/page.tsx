@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getRepoPageData } from "@/actions/repositories";
+import { getRepoPageData, getRepoReadme, getRepoCommitCountCached } from "@/actions/repositories";
 import { FileTree } from "@/components/file-tree";
 import { CodeViewer } from "@/components/code-viewer";
 import { CloneUrl } from "@/components/clone-url";
@@ -7,9 +8,67 @@ import { StarButton } from "@/components/star-button";
 import { BranchSelector } from "@/components/branch-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lock, Globe, FileCode, Settings, GitCommit, GitBranch } from "lucide-react";
+import { Lock, Globe, FileCode, Settings, GitCommit, GitBranch, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getPublicServerUrl } from "@/lib/utils";
+
+async function CommitCount({ username, repoName, branch }: { username: string; repoName: string; branch: string }) {
+  const commitCount = await getRepoCommitCountCached(username, repoName);
+
+  if (commitCount === 0) return null;
+
+  return (
+    <Link
+      href={`/${username}/${repoName}/commits/${branch}`}
+      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <GitCommit className="h-4 w-4" />
+      <span className="font-medium">{commitCount}</span>
+      <span className="hidden sm:inline">commits</span>
+    </Link>
+  );
+}
+
+async function ReadmeSection({ username, repoName, readmeOid }: { username: string; repoName: string; readmeOid: string }) {
+  const content = await getRepoReadme(username, repoName, readmeOid);
+
+  if (!content) return null;
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 bg-card border-b border-border">
+        <FileCode className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">README.md</span>
+      </div>
+      <div className="p-6">
+        <CodeViewer content={content} language="markdown" />
+      </div>
+    </div>
+  );
+}
+
+function ReadmeSkeleton() {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 bg-card border-b border-border">
+        <FileCode className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium">README.md</span>
+      </div>
+      <div className="p-6 flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    </div>
+  );
+}
+
+function CommitCountSkeleton() {
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <GitCommit className="h-4 w-4" />
+      <Loader2 className="h-3 w-3 animate-spin" />
+    </div>
+  );
+}
 
 export default async function RepoPage({ params }: { params: Promise<{ username: string; repo: string }> }) {
   const { username, repo: repoName } = await params;
@@ -20,7 +79,7 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
     notFound();
   }
 
-  const { repo, files, isEmpty, readmeContent, branches, commitCount, isOwner } = data;
+  const { repo, files, isEmpty, branches, readmeOid, isOwner } = data;
 
   return (
     <div className="container px-4 py-6">
@@ -67,16 +126,9 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
           <div className="border border-border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between gap-4 px-4 py-3 bg-card border-b border-border">
               <BranchSelector branches={branches} currentBranch={repo.defaultBranch} username={username} repoName={repo.name} />
-              {commitCount > 0 && (
-                <Link
-                  href={`/${username}/${repo.name}/commits/${repo.defaultBranch}`}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <GitCommit className="h-4 w-4" />
-                  <span className="font-medium">{commitCount}</span>
-                  <span className="hidden sm:inline">commits</span>
-                </Link>
-              )}
+              <Suspense fallback={<CommitCountSkeleton />}>
+                <CommitCount username={username} repoName={repoName} branch={repo.defaultBranch} />
+              </Suspense>
             </div>
 
             {isEmpty ? (
@@ -86,16 +138,10 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
             )}
           </div>
 
-          {readmeContent && (
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 bg-card border-b border-border">
-                <FileCode className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">README.md</span>
-              </div>
-              <div className="p-6">
-                <CodeViewer content={readmeContent} language="markdown" />
-              </div>
-            </div>
+          {readmeOid && (
+            <Suspense fallback={<ReadmeSkeleton />}>
+              <ReadmeSection username={username} repoName={repoName} readmeOid={readmeOid} />
+            </Suspense>
           )}
         </div>
 
