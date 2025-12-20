@@ -7,7 +7,6 @@ import { createR2Fs, getRepoPrefix } from "@/lib/r2-fs";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { revalidateTag } from "next/cache";
-import { getRepoCacheTag } from "@/actions/repositories";
 
 function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
@@ -439,7 +438,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     response = await handleUploadPack(fs, "/", body);
   } else {
     response = await handleReceivePack(fs, "/", body);
-    revalidateTag(getRepoCacheTag(username, repoName), { expire: 0 });
+    revalidateTag(`repo:${username}/${repoName}`, { expire: 0 });
   }
 
   return new NextResponse(new Uint8Array(response), {

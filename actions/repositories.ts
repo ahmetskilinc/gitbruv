@@ -670,7 +670,3 @@ export async function getRepoPageData(owner: string, repoName: string) {
     isOwner,
   };
 }
-
-export function getRepoCacheTag(owner: string, repoName: string) {
-  return `repo:${owner}/${repoName}`;
-}
