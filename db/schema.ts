@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid, jsonb } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -7,6 +7,17 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   username: text("username").notNull().unique(),
+  bio: text("bio"),
+  location: text("location"),
+  website: text("website"),
+  pronouns: text("pronouns"),
+  avatarUrl: text("avatar_url"),
+  socialLinks: jsonb("social_links").$type<{
+    github?: string;
+    twitter?: string;
+    linkedin?: string;
+    custom?: string[];
+  }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -65,4 +76,3 @@ export const repositories = pgTable("repositories", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
-
