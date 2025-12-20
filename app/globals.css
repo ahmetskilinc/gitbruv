@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -170,4 +171,262 @@
 
 input[type="radio"] {
   accent-color: var(--primary);
+}
+
+.markdown-body {
+  color: #e6edf3;
+  font-size: 16px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #e6edf3;
+}
+
+.markdown-body h1 {
+  padding-bottom: 0.3em;
+  font-size: 2em;
+  border-bottom: 1px solid #30363d;
+}
+
+.markdown-body h2 {
+  padding-bottom: 0.3em;
+  font-size: 1.5em;
+  border-bottom: 1px solid #30363d;
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+
+.markdown-body h4 {
+  font-size: 1em;
+}
+
+.markdown-body h5 {
+  font-size: 0.875em;
+}
+
+.markdown-body h6 {
+  font-size: 0.85em;
+  color: #8b949e;
+}
+
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body a {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  white-space: break-spaces;
+  background-color: rgba(110, 118, 129, 0.4);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.markdown-body pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  color: #e6edf3;
+  background-color: #161b22;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  margin: 0;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+  font-size: 100%;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li {
+  margin-top: 4px;
+}
+
+.markdown-body li + li {
+  margin-top: 4px;
+}
+
+.markdown-body li > p {
+  margin-top: 16px;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.markdown-body blockquote {
+  padding: 0 1em;
+  color: #8b949e;
+  border-left: 0.25em solid #30363d;
+  margin: 0 0 16px 0;
+}
+
+.markdown-body blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  background-color: #30363d;
+  border: 0;
+}
+
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid #30363d;
+}
+
+.markdown-body table th {
+  font-weight: 600;
+  background-color: #161b22;
+}
+
+.markdown-body table tr {
+  background-color: #0d1117;
+  border-top: 1px solid #30363d;
+}
+
+.markdown-body table tr:nth-child(2n) {
+  background-color: #161b22;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body input[type="checkbox"] {
+  margin-right: 0.5em;
+  vertical-align: middle;
+}
+
+.markdown-body .task-list-item {
+  list-style-type: none;
+  margin-left: -1.5em;
+}
+
+.markdown-body .contains-task-list {
+  padding-left: 1.5em;
+}
+
+.markdown-body pre .hljs-keyword,
+.markdown-body pre .hljs-selector-tag,
+.markdown-body pre .hljs-literal,
+.markdown-body pre .hljs-section,
+.markdown-body pre .hljs-link {
+  color: #ff7b72;
+}
+
+.markdown-body pre .hljs-string,
+.markdown-body pre .hljs-title,
+.markdown-body pre .hljs-name,
+.markdown-body pre .hljs-type,
+.markdown-body pre .hljs-attr,
+.markdown-body pre .hljs-symbol,
+.markdown-body pre .hljs-bullet,
+.markdown-body pre .hljs-addition,
+.markdown-body pre .hljs-variable,
+.markdown-body pre .hljs-template-tag,
+.markdown-body pre .hljs-template-variable {
+  color: #a5d6ff;
+}
+
+.markdown-body pre .hljs-comment,
+.markdown-body pre .hljs-quote,
+.markdown-body pre .hljs-deletion,
+.markdown-body pre .hljs-meta {
+  color: #8b949e;
+}
+
+.markdown-body pre .hljs-function,
+.markdown-body pre .hljs-built_in,
+.markdown-body pre .hljs-class .hljs-title {
+  color: #d2a8ff;
+}
+
+.markdown-body pre .hljs-number,
+.markdown-body pre .hljs-regexp,
+.markdown-body pre .hljs-selector-id,
+.markdown-body pre .hljs-selector-class {
+  color: #79c0ff;
 }

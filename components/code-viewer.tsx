@@ -2,18 +2,11 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
 
-export function CodeViewer({
-  content,
-  language,
-  showLineNumbers = false,
-}: {
-  content: string;
-  language: string;
-  showLineNumbers?: boolean;
-}) {
+export function CodeViewer({ content, language, showLineNumbers = false }: { content: string; language: string; showLineNumbers?: boolean }) {
   const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,8 +29,10 @@ export function CodeViewer({
 
   if (language === "markdown" || language === "md") {
     return (
-      <div className="prose prose-invert prose-sm max-w-none prose-headings:border-b prose-headings:border-border prose-headings:pb-2 prose-a:text-accent prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-muted">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <div className="markdown-body">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+          {content}
+        </ReactMarkdown>
       </div>
     );
   }
@@ -74,9 +69,7 @@ export function CodeViewer({
           {lines.map((line, i) => (
             <tr key={i} className="hover:bg-muted/30">
               {showLineNumbers && (
-                <td className="text-right text-muted-foreground select-none pr-4 pl-4 py-0.5 w-12 align-top border-r border-border">
-                  {i + 1}
-                </td>
+                <td className="text-right text-muted-foreground select-none pr-4 pl-4 py-0.5 w-12 align-top border-r border-border">{i + 1}</td>
               )}
               <td className="pl-4 py-0.5 whitespace-pre">{line || " "}</td>
             </tr>
