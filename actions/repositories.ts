@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { repositories, users, stars } from "@/db/schema";
 import { getSession } from "@/lib/session";
 import { eq, and, desc, count, sql } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import git from "isomorphic-git";
 import { createR2Fs, getRepoPrefix } from "@/lib/r2-fs";
 
@@ -560,31 +560,8 @@ export type FileEntry = {
   lastCommit: { message: string; timestamp: number } | null;
 };
 
-export async function getRepoPageData(owner: string, repoName: string) {
-  const [user, session] = await Promise.all([db.query.users.findFirst({ where: eq(users.username, owner) }), getSession()]);
-
-  if (!user) return null;
-
-  const repo = await db.query.repositories.findFirst({
-    where: and(eq(repositories.ownerId, user.id), eq(repositories.name, repoName)),
-  });
-
-  if (!repo) return null;
-
-  if (repo.visibility === "private" && (!session?.user || session.user.id !== repo.ownerId)) {
-    return null;
-  }
-
-  const [starCountResult, starredResult] = await Promise.all([
-    db.select({ count: count() }).from(stars).where(eq(stars.repositoryId, repo.id)),
-    session?.user ? db.query.stars.findFirst({ where: and(eq(stars.userId, session.user.id), eq(stars.repositoryId, repo.id)) }) : Promise.resolve(null),
-  ]);
-
-  const starCount = starCountResult[0]?.count ?? 0;
-  const starred = !!starredResult;
-  const isOwner = session?.user?.id === repo.ownerId;
-
-  const repoPrefix = getRepoPrefix(user.id, `${repoName}.git`);
+async function fetchGitData(userId: string, repoName: string, defaultBranch: string) {
+  const repoPrefix = getRepoPrefix(userId, `${repoName}.git`);
   const fs = createR2Fs(repoPrefix);
 
   let files: FileEntry[] = [];
@@ -594,7 +571,7 @@ export async function getRepoPageData(owner: string, repoName: string) {
   let commitCount = 0;
 
   try {
-    const [branchList, commits] = await Promise.all([git.listBranches({ fs, gitdir: "/" }), git.log({ fs, gitdir: "/", ref: repo.defaultBranch })]);
+    const [branchList, commits] = await Promise.all([git.listBranches({ fs, gitdir: "/" }), git.log({ fs, gitdir: "/", ref: defaultBranch })]);
 
     branches = branchList;
     commitCount = commits.length;
@@ -609,7 +586,7 @@ export async function getRepoPageData(owner: string, repoName: string) {
         tree.map(async (entry) => {
           let lastCommit: { message: string; timestamp: number } | null = null;
           try {
-            const fileCommits = await git.log({ fs, gitdir: "/", ref: repo.defaultBranch, filepath: entry.path, depth: 1 });
+            const fileCommits = await git.log({ fs, gitdir: "/", ref: defaultBranch, filepath: entry.path, depth: 1 });
             if (fileCommits.length > 0) {
               lastCommit = {
                 message: fileCommits[0].commit.message.split("\n")[0],
@@ -644,9 +621,43 @@ export async function getRepoPageData(owner: string, repoName: string) {
   } catch (err: unknown) {
     const error = err as { code?: string };
     if (error.code !== "NotFoundError") {
-      console.error("getRepoPageData error:", err);
+      console.error("fetchGitData error:", err);
     }
   }
+
+  return { files, isEmpty, readmeContent, branches, commitCount };
+}
+
+const getCachedGitData = (owner: string, repoName: string, userId: string, defaultBranch: string) =>
+  unstable_cache(() => fetchGitData(userId, repoName, defaultBranch), [`git-data`, owner, repoName], {
+    tags: [`repo:${owner}/${repoName}`],
+    revalidate: 3600,
+  })();
+
+export async function getRepoPageData(owner: string, repoName: string) {
+  const [user, session] = await Promise.all([db.query.users.findFirst({ where: eq(users.username, owner) }), getSession()]);
+
+  if (!user) return null;
+
+  const repo = await db.query.repositories.findFirst({
+    where: and(eq(repositories.ownerId, user.id), eq(repositories.name, repoName)),
+  });
+
+  if (!repo) return null;
+
+  if (repo.visibility === "private" && (!session?.user || session.user.id !== repo.ownerId)) {
+    return null;
+  }
+
+  const [starCountResult, starredResult, gitData] = await Promise.all([
+    db.select({ count: count() }).from(stars).where(eq(stars.repositoryId, repo.id)),
+    session?.user ? db.query.stars.findFirst({ where: and(eq(stars.userId, session.user.id), eq(stars.repositoryId, repo.id)) }) : Promise.resolve(null),
+    getCachedGitData(owner, repoName, user.id, repo.defaultBranch),
+  ]);
+
+  const starCount = starCountResult[0]?.count ?? 0;
+  const starred = !!starredResult;
+  const isOwner = session?.user?.id === repo.ownerId;
 
   return {
     repo: {
@@ -655,11 +666,11 @@ export async function getRepoPageData(owner: string, repoName: string) {
       starCount,
       starred,
     },
-    files,
-    isEmpty,
-    readmeContent,
-    branches,
-    commitCount,
+    ...gitData,
     isOwner,
   };
+}
+
+export function getRepoCacheTag(owner: string, repoName: string) {
+  return `repo:${owner}/${repoName}`;
 }
