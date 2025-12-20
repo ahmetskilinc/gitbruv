@@ -1,0 +1,70 @@
+"use client";
+
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { Lock, Globe } from "lucide-react";
+
+type Repository = {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: "public" | "private";
+  updatedAt: Date;
+};
+
+export function RepoList({
+  repos,
+  username,
+}: {
+  repos: Repository[];
+  username: string;
+}) {
+  return (
+    <div className="space-y-3">
+      {repos.map((repo) => (
+        <Link
+          key={repo.id}
+          href={`/${username}/${repo.name}`}
+          className="block p-5 rounded-xl border border-border bg-card hover:border-accent/50 transition-all duration-200 group"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 mb-1.5">
+                <span className="font-semibold text-accent group-hover:underline text-lg">
+                  {repo.name}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                    repo.visibility === "private"
+                      ? "border-yellow-500/30 text-yellow-500 bg-yellow-500/10"
+                      : "border-border text-muted-foreground bg-secondary"
+                  }`}
+                >
+                  {repo.visibility === "private" ? (
+                    <>
+                      <Lock className="h-3 w-3" />
+                      Private
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="h-3 w-3" />
+                      Public
+                    </>
+                  )}
+                </span>
+              </div>
+              {repo.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                  {repo.description}
+                </p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground shrink-0 pt-1">
+              {formatDistanceToNow(new Date(repo.updatedAt), { addSuffix: true })}
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
