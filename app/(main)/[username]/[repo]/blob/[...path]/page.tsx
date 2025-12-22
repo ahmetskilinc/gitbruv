@@ -90,7 +90,7 @@ export default async function BlobPage({ params }: { params: Promise<{ username:
 
   return (
     <div className="container px-4 py-6">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row items-start h-9 lg:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/${username}`} className="text-accent hover:underline">
             <span className="text-xl font-bold">{username}</span>
