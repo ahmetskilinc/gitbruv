@@ -25,4 +25,3 @@ export const requireAuth = (c: Context<AppEnv>, ownerId: string): Response | nul
   }
   return null;
 };
-
