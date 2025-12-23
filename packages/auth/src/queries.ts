@@ -28,7 +28,9 @@ export async function getCredentialAccount(db: Database, userId: string) {
 }
 
 export async function verifyCredentials(db: Database, credentials: Credentials): Promise<AuthResult> {
-  const user = await getUserByEmail(db, credentials.email);
+  const user =
+    (await getUserByEmail(db, credentials.identifier)) || (await getUserByUsername(db, credentials.identifier));
+
   if (!user) {
     return { success: false, user: null, error: "User not found" };
   }

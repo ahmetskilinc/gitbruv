@@ -25,7 +25,7 @@ export function parseBasicAuth(request: Request): Credentials | null {
     return null;
   }
   return {
-    email: credentials.slice(0, colonIndex),
+    identifier: credentials.slice(0, colonIndex),
     password: credentials.slice(colonIndex + 1),
   };
 }

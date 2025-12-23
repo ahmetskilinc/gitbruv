@@ -4,7 +4,7 @@ export interface AuthenticatedUser {
 }
 
 export interface Credentials {
-  email: string;
+  identifier: string;
   password: string;
 }
 
