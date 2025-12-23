@@ -49,7 +49,7 @@ export async function r2GetBatch(keys: string[]): Promise<Map<string, Buffer | n
     throw new Error(`Failed to batch get objects: ${response.statusText}`);
   }
 
-  const { results } = await response.json<{ results: Record<string, string | null> }>();
+  const { results } = await response.json() as { results: Record<string, string | null> };
   const map = new Map<string, Buffer | null>();
 
   for (const [key, value] of Object.entries(results)) {
@@ -196,7 +196,7 @@ export async function r2List(prefix: string): Promise<string[]> {
     throw new Error(`Failed to list objects: ${response.statusText}`);
   }
 
-  const { keys } = await response.json<{ keys: string[] }>();
+  const { keys } = await response.json() as { keys: string[] };
   return keys;
 }
 

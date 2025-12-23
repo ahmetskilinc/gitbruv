@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePublicRepositories } from "@/lib/hooks/use-repositories";
@@ -7,7 +8,7 @@ import { usePublicUsers } from "@/lib/hooks/use-users";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Star, GitBranch, ChevronLeft, ChevronRight, Compass, Clock, Flame, Sparkles, Users, BookOpen } from "lucide-react";
+import { Star, GitBranch, ChevronLeft, ChevronRight, Compass, Clock, Flame, Sparkles, Users, BookOpen, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const REPO_SORT_OPTIONS = [
@@ -210,7 +211,7 @@ function UserGridSkeleton() {
   );
 }
 
-export default function ExplorePage() {
+function ExploreContent() {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
   const sortParam = searchParams.get("sort");
@@ -282,5 +283,19 @@ export default function ExplorePage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="container py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
   );
 }

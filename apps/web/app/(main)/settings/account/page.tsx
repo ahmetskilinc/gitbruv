@@ -41,7 +41,7 @@ export default function AccountSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <EmailForm currentEmail={user.email} />
+          <EmailForm currentEmail={user.email ?? ""} />
         </CardContent>
       </Card>
 
