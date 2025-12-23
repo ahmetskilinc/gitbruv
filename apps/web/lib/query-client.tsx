@@ -1,20 +1,34 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { SWRConfig } from "swr";
+import { authClient } from "./auth-client";
 
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-            refetchOnWindowFocus: false,
-          },
-        },
-      })
+async function fetcher(url: string) {
+  const session = await authClient.getSession();
+  const headers: HeadersInit = {};
+
+  if (session?.data?.session?.token) {
+    headers["Authorization"] = `Bearer ${session.data.session.token}`;
+  }
+
+  const res = await fetch(url, {
+    credentials: "include",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch");
+  return res.json();
+}
+
+export function SWRProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <SWRConfig
+      value={{
+        revalidateOnFocus: false,
+        fetcher,
+      }}
+    >
+      {children}
+    </SWRConfig>
   );
-
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

@@ -2,10 +2,11 @@ import { type Hono } from "hono";
 import { type AppEnv } from "../types";
 import { authMiddleware } from "../middleware/auth";
 import { createDb } from "../db";
-import { users, repositories } from "@gitbruv/db";
+import { users, repositories, accounts } from "@gitbruv/db";
 import { eq, and } from "drizzle-orm";
 import { r2DeletePrefix } from "./r2-helpers";
 import { getRepoPrefix } from "../r2-fs";
+import { verifyPassword, hashPassword } from "@gitbruv/auth";
 
 export function registerSettingsRoutes(app: Hono<AppEnv>) {
   app.use("/api/settings/*", async (c, next) => {
@@ -155,6 +156,40 @@ export function registerSettingsRoutes(app: Hono<AppEnv>) {
         updatedAt: new Date(),
       })
       .where(eq(users.id, user.id));
+
+    return c.json({ success: true });
+  });
+
+  app.patch("/api/settings/password", authMiddleware, async (c) => {
+    const user = c.get("user");
+    if (!user) {
+      return c.text("Unauthorized", 401);
+    }
+
+    const data = await c.req.json<{ currentPassword: string; newPassword: string }>();
+    const db = c.get("db");
+
+    const account = await db.query.accounts.findFirst({
+      where: and(eq(accounts.userId, user.id), eq(accounts.providerId, "credential")),
+    });
+
+    if (!account?.password) {
+      return c.json({ error: "No password set for this account" }, 400);
+    }
+
+    const valid = await verifyPassword(data.currentPassword, account.password);
+    if (!valid) {
+      return c.json({ error: "Current password is incorrect" }, 400);
+    }
+
+    const hashedPassword = await hashPassword(data.newPassword);
+    await db
+      .update(accounts)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(accounts.id, account.id));
 
     return c.json({ success: true });
   });

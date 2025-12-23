@@ -4,21 +4,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateEmail } from "@/actions/settings";
+import { useUpdateEmail } from "@/lib/hooks/use-settings";
 import { Loader2 } from "lucide-react";
+import { mutate } from "swr";
 
 interface EmailFormProps {
   currentEmail: string;
 }
 
 export function EmailForm({ currentEmail }: EmailFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useUpdateEmail();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(false);
 
@@ -27,18 +27,16 @@ export function EmailForm({ currentEmail }: EmailFormProps) {
 
     if (email === currentEmail) {
       setError("New email is the same as current email");
-      setLoading(false);
       return;
     }
 
     try {
-      await updateEmail({ email });
+      await trigger({ email });
+      mutate((key) => typeof key === "string" && key.includes("/settings"));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update email");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -70,11 +68,10 @@ export function EmailForm({ currentEmail }: EmailFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={loading}>
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      <Button type="submit" disabled={isMutating}>
+        {isMutating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Update Email
       </Button>
     </form>
   );
 }
-

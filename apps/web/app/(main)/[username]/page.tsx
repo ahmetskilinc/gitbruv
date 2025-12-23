@@ -1,18 +1,25 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getUserRepositoriesWithStars, getUserStarredRepos, getUserProfile } from "@/actions/repositories";
+"use client";
+
+import { use } from "react";
+import { notFound, useSearchParams } from "next/navigation";
+import { useUserProfile, useUserStarredRepos } from "@/lib/hooks/use-users";
+import { useUserRepositories } from "@/lib/hooks/use-repositories";
 import { RepoList } from "@/components/repo-list";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, GitBranch, MapPin, Link as LinkIcon, Star, BookOpen } from "lucide-react";
+import { CalendarDays, GitBranch, MapPin, Link as LinkIcon, Star, BookOpen, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { GithubIcon, XIcon, LinkedInIcon } from "@/components/icons";
 
-async function RepositoriesTab({ username }: { username: string }) {
-  await connection();
-  const repos = await getUserRepositoriesWithStars(username);
+function RepositoriesTab({ username }: { username: string }) {
+  const { data, isLoading } = useUserRepositories(username);
+
+  if (isLoading) {
+    return <TabSkeleton />;
+  }
+
+  const repos = data?.repos || [];
 
   if (repos.length === 0) {
     return (
@@ -27,9 +34,14 @@ async function RepositoriesTab({ username }: { username: string }) {
   return <RepoList repos={repos} username={username} />;
 }
 
-async function StarredTab({ username }: { username: string }) {
-  await connection();
-  const repos = await getUserStarredRepos(username);
+function StarredTab({ username }: { username: string }) {
+  const { data, isLoading } = useUserStarredRepos(username);
+
+  if (isLoading) {
+    return <TabSkeleton />;
+  }
+
+  const repos = data?.repos || [];
 
   if (repos.length === 0) {
     return (
@@ -61,13 +73,39 @@ function TabSkeleton() {
   );
 }
 
-export default async function ProfilePage({ params, searchParams }: { params: Promise<{ username: string }>; searchParams: Promise<{ tab?: string }> }) {
-  const { username } = await params;
-  const { tab } = await searchParams;
+function PageSkeleton() {
+  return (
+    <div className="container px-4 py-8">
+      <div className="flex flex-col lg:flex-row gap-8">
+        <aside className="lg:w-72 shrink-0">
+          <div className="space-y-4">
+            <div className="w-64 h-64 mx-auto lg:mx-0 rounded-full bg-muted animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </aside>
+        <div className="flex-1 min-w-0">
+          <div className="h-10 w-64 bg-muted rounded animate-pulse mb-6" />
+          <TabSkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const user = await getUserProfile(username);
+export default function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = use(params);
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+  const { data: user, isLoading, error } = useUserProfile(username);
 
-  if (!user) {
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (error || !user) {
     notFound();
   }
 
@@ -157,15 +195,11 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
             </TabsList>
 
             <TabsContent value="repositories">
-              <Suspense fallback={<TabSkeleton />}>
-                <RepositoriesTab username={username} />
-              </Suspense>
+              <RepositoriesTab username={username} />
             </TabsContent>
 
             <TabsContent value="starred">
-              <Suspense fallback={<TabSkeleton />}>
-                <StarredTab username={username} />
-              </Suspense>
+              <StarredTab username={username} />
             </TabsContent>
           </Tabs>
         </div>

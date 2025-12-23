@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { deleteAccount } from "@/actions/settings";
+import { useDeleteAccount } from "@/lib/hooks/use-settings";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -13,7 +13,7 @@ interface DeleteAccountProps {
 }
 
 export function DeleteAccount({ username }: DeleteAccountProps) {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useDeleteAccount();
   const [error, setError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -25,15 +25,13 @@ export function DeleteAccount({ username }: DeleteAccountProps) {
       return;
     }
 
-    setLoading(true);
     setError(null);
 
     try {
-      await deleteAccount();
+      await trigger();
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete account");
-      setLoading(false);
     }
   }
 
@@ -93,20 +91,19 @@ export function DeleteAccount({ username }: DeleteAccountProps) {
             setConfirmation("");
             setError(null);
           }}
-          disabled={loading}
+          disabled={isMutating}
         >
           Cancel
         </Button>
         <Button
           variant="destructive"
           onClick={handleDelete}
-          disabled={loading || confirmation !== username}
+          disabled={isMutating || confirmation !== username}
         >
-          {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+          {isMutating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Delete My Account
         </Button>
       </div>
     </div>
   );
 }
-

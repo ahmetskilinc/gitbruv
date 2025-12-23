@@ -1,23 +1,13 @@
-import { Suspense } from "react";
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getRepository, getRepoFileTree, getRepoBranches } from "@/actions/repositories";
+import { useRepositoryWithStars, useRepoTree, useRepoBranches } from "@/lib/hooks/use-repositories";
 import { FileTree } from "@/components/file-tree";
 import { BranchSelector } from "@/components/branch-selector";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Globe, ChevronRight, Home } from "lucide-react";
-
-export const revalidate = 60;
-
-async function TreeContent({ username, repoName, branch, dirPath }: { username: string; repoName: string; branch: string; dirPath: string }) {
-  const fileTree = await getRepoFileTree(username, repoName, branch, dirPath);
-
-  if (!fileTree) {
-    notFound();
-  }
-
-  return <FileTree files={fileTree.files} username={username} repoName={repoName} branch={branch} basePath={dirPath} />;
-}
+import { Lock, Globe, ChevronRight, Home, Loader2 } from "lucide-react";
 
 function TreeSkeleton() {
   return (
@@ -34,17 +24,39 @@ function TreeSkeleton() {
   );
 }
 
-export default async function TreePage({ params }: { params: Promise<{ username: string; repo: string; path: string[] }> }) {
-  const { username, repo: repoName, path: pathSegments } = await params;
+function PageSkeleton() {
+  return (
+    <div className="container px-4 py-6">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+      </div>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="h-12 bg-card border-b border-border" />
+        <TreeSkeleton />
+      </div>
+    </div>
+  );
+}
+
+export default function TreePage({ params }: { params: Promise<{ username: string; repo: string; path: string[] }> }) {
+  const { username, repo: repoName, path: pathSegments } = use(params);
   const branch = pathSegments[0];
   const dirPath = pathSegments.slice(1).join("/");
 
-  const [repo, branches] = await Promise.all([getRepository(username, repoName), getRepoBranches(username, repoName)]);
+  const { data: repo, isLoading: repoLoading, error: repoError } = useRepositoryWithStars(username, repoName);
+  const { data: branchesData, isLoading: branchesLoading } = useRepoBranches(username, repoName);
+  const { data: treeData, isLoading: treeLoading, error: treeError } = useRepoTree(username, repoName, branch, dirPath);
 
-  if (!repo) {
+  if (repoLoading || branchesLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (repoError || !repo) {
     notFound();
   }
 
+  const branches = branchesData?.branches || [];
   const pathParts = dirPath.split("/").filter(Boolean);
 
   return (
@@ -98,9 +110,13 @@ export default async function TreePage({ params }: { params: Promise<{ username:
           ))}
         </nav>
 
-        <Suspense fallback={<TreeSkeleton />}>
-          <TreeContent username={username} repoName={repoName} branch={branch} dirPath={dirPath} />
-        </Suspense>
+        {treeLoading ? (
+          <TreeSkeleton />
+        ) : treeError || !treeData ? (
+          <div className="p-8 text-center text-muted-foreground">Failed to load directory</div>
+        ) : (
+          <FileTree files={treeData.files} username={username} repoName={repoName} branch={branch} basePath={dirPath} />
+        )}
       </div>
     </div>
   );

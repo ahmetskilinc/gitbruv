@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toggleStar } from "@/actions/repositories";
+import { useToggleStar } from "@/lib/hooks/use-repositories";
 import { cn } from "@/lib/utils";
+import { mutate } from "swr";
 
 export function StarButton({
   repoId,
@@ -17,16 +18,17 @@ export function StarButton({
 }) {
   const [starred, setStarred] = useState(initialStarred);
   const [count, setCount] = useState(initialCount);
-  const [isPending, startTransition] = useTransition();
+  const { trigger, isMutating } = useToggleStar(repoId);
 
-  function handleClick() {
-    startTransition(async () => {
-      try {
-        const result = await toggleStar(repoId);
+  async function handleClick() {
+    try {
+      const result = await trigger();
+      if (result) {
         setStarred(result.starred);
         setCount((c) => (result.starred ? c + 1 : c - 1));
-      } catch {}
-    });
+        mutate((key) => typeof key === "string" && key.includes("/repositories"));
+      }
+    } catch {}
   }
 
   return (
@@ -34,7 +36,7 @@ export function StarButton({
       variant="outline"
       size="sm"
       onClick={handleClick}
-      disabled={isPending}
+      disabled={isMutating}
       className={cn(
         "gap-2 transition-colors",
         starred && "bg-accent/10 border-accent/30 text-accent hover:bg-accent/20"
@@ -46,4 +48,3 @@ export function StarButton({
     </Button>
   );
 }
-

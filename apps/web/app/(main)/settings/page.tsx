@@ -1,15 +1,34 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/actions/settings";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useCurrentUser } from "@/lib/hooks/use-settings";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
 import { SocialLinksForm } from "@/components/settings/social-links-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
-export default async function SettingsPage() {
-  const user = await getCurrentUser();
+export default function SettingsPage() {
+  const router = useRouter();
+  const { data: user, isLoading, error } = useCurrentUser();
+
+  useEffect(() => {
+    if (!isLoading && (error || !user)) {
+      router.push("/login");
+    }
+  }, [isLoading, error, user, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!user) {
-    redirect("/login");
+    return null;
   }
 
   return (

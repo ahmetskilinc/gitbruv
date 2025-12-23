@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { getRepositoryWithStars, updateRepository, deleteRepository } from "@/actions/repositories";
+import { useRepositoryWithStars, useUpdateRepository, useDeleteRepository } from "@/lib/hooks/use-repositories";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,23 +13,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import { Loader2, Lock, Globe, Trash2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-
-type RepoData = {
-  id: string;
-  name: string;
-  description: string | null;
-  visibility: "public" | "private";
-  ownerId: string;
-};
+import { mutate } from "swr";
 
 export default function RepoSettingsPage({ params }: { params: Promise<{ username: string; repo: string }> }) {
   const { username, repo: repoName } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
-  const [repo, setRepo] = useState<RepoData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { data: repo, isLoading } = useRepositoryWithStars(username, repoName);
+  const { trigger: updateRepo, isMutating: saving } = useUpdateRepository(repo?.id || "");
+  const { trigger: deleteRepo, isMutating: deleting } = useDeleteRepository(repo?.id || "");
+
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,25 +30,16 @@ export default function RepoSettingsPage({ params }: { params: Promise<{ usernam
     description: "",
     visibility: "public" as "public" | "private",
   });
+  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
-    async function loadRepo() {
-      try {
-        const data = await getRepositoryWithStars(username, repoName);
-        if (data) {
-          setRepo(data);
-          setFormData({
-            name: data.name,
-            description: data.description || "",
-            visibility: data.visibility,
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadRepo();
-  }, [username, repoName]);
+  if (!initialized && repo) {
+    setFormData({
+      name: repo.name,
+      description: repo.description || "",
+      visibility: repo.visibility,
+    });
+    setInitialized(true);
+  }
 
   const isOwner = session?.user?.id === repo?.ownerId;
 
@@ -63,40 +47,36 @@ export default function RepoSettingsPage({ params }: { params: Promise<{ usernam
     e.preventDefault();
     if (!repo) return;
 
-    setSaving(true);
     try {
-      const updated = await updateRepository(repo.id, {
+      const updated = await updateRepo({
         name: formData.name,
         description: formData.description,
         visibility: formData.visibility,
       });
+      mutate((key) => typeof key === "string" && key.includes("/repositories"));
       toast.success("Settings saved");
-      if (updated.name !== repo.name) {
+      if (updated && updated.name !== repo.name) {
         router.push(`/${username}/${updated.name}/settings`);
       }
-      setRepo({ ...repo, ...updated });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save settings");
-    } finally {
-      setSaving(false);
     }
   }
 
   async function handleDelete() {
     if (!repo || deleteConfirm !== repo.name) return;
 
-    setDeleting(true);
     try {
-      await deleteRepository(repo.id);
+      await deleteRepo();
+      mutate((key) => typeof key === "string" && key.includes("/repositories"));
       toast.success("Repository deleted");
       router.push(`/${username}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete repository");
-      setDeleting(false);
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container max-w-3xl py-8">
         <div className="flex items-center justify-center py-12">

@@ -1,7 +1,8 @@
-import { Suspense } from "react";
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
-import { getRepoPageData, getRepoReadme, getRepoCommitCountCached } from "@/actions/repositories";
+import { useRepoPageData, useRepoCommitCount, useRepoReadme } from "@/lib/hooks/use-repositories";
 import { FileTree } from "@/components/file-tree";
 import { CodeViewer } from "@/components/code-viewer";
 import { CloneUrl } from "@/components/clone-url";
@@ -13,13 +14,19 @@ import { Lock, Globe, FileCode, Settings, GitCommit, GitBranch, Loader2 } from "
 import Link from "next/link";
 import { getPublicServerUrl } from "@/lib/utils";
 
-export const revalidate = 60;
+function CommitCount({ username, repoName, branch }: { username: string; repoName: string; branch: string }) {
+  const { data, isLoading } = useRepoCommitCount(username, repoName, branch);
 
-async function CommitCount({ username, repoName, branch }: { username: string; repoName: string; branch: string }) {
-  await connection();
-  const commitCount = await getRepoCommitCountCached(username, repoName);
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <GitCommit className="h-4 w-4" />
+        <Loader2 className="h-3 w-3 animate-spin" />
+      </div>
+    );
+  }
 
-  if (commitCount === 0) return null;
+  if (!data || data.count === 0) return null;
 
   return (
     <Link
@@ -27,17 +34,30 @@ async function CommitCount({ username, repoName, branch }: { username: string; r
       className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
     >
       <GitCommit className="h-4 w-4" />
-      <span className="font-medium">{commitCount}</span>
+      <span className="font-medium">{data.count}</span>
       <span className="hidden sm:inline">commits</span>
     </Link>
   );
 }
 
-async function ReadmeSection({ username, repoName, readmeOid }: { username: string; repoName: string; readmeOid: string }) {
-  await connection();
-  const content = await getRepoReadme(username, repoName, readmeOid);
+function ReadmeSection({ username, repoName, readmeOid }: { username: string; repoName: string; readmeOid: string }) {
+  const { data, isLoading } = useRepoReadme(username, repoName, readmeOid);
 
-  if (!content) return null;
+  if (isLoading) {
+    return (
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 bg-card border-b border-border">
+          <FileCode className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">README.md</span>
+        </div>
+        <div className="p-6 flex items-center justify-center min-h-[200px]">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data?.content) return null;
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -46,41 +66,91 @@ async function ReadmeSection({ username, repoName, readmeOid }: { username: stri
         <span className="text-sm font-medium">README.md</span>
       </div>
       <div className="p-6">
-        <CodeViewer content={content} language="markdown" />
+        <CodeViewer content={data.content} language="markdown" />
       </div>
     </div>
   );
 }
 
-function ReadmeSkeleton() {
+function PageSkeleton() {
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 bg-card border-b border-border">
-        <FileCode className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">README.md</span>
+    <div className="container px-4 py-6">
+      <div className="flex flex-col lg:flex-row items-start h-9 lg:items-center justify-between gap-4 mb-6">
+        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-20 bg-muted rounded animate-pulse" />
+          <div className="h-8 w-24 bg-muted rounded animate-pulse" />
+        </div>
       </div>
-      <div className="p-6 flex items-center justify-center min-h-[200px]">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="grid lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 space-y-6">
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="h-12 bg-card border-b border-border" />
+            <div className="p-4 space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <aside>
+          <div className="border border-border rounded-lg p-4">
+            <div className="h-5 w-16 bg-muted rounded animate-pulse mb-3" />
+            <div className="h-4 w-full bg-muted rounded animate-pulse" />
+          </div>
+        </aside>
       </div>
     </div>
   );
 }
 
-function CommitCountSkeleton() {
+function EmptyRepoGuide({ username, repoName }: { username: string; repoName: string }) {
+  const cloneUrl = `${getPublicServerUrl()}/api/git/${username}/${repoName}.git`;
+
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <GitCommit className="h-4 w-4" />
-      <Loader2 className="h-3 w-3 animate-spin" />
+    <div className="p-6 space-y-6">
+      <div className="text-center py-8">
+        <GitBranch className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+        <h3 className="text-lg font-medium mb-2">This repository is empty</h3>
+        <p className="text-muted-foreground">Get started by cloning or pushing to this repository.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-medium mb-2">Create a new repository on the command line</h4>
+          <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+            <code>{`echo "# ${repoName}" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin ${cloneUrl}
+git push -u origin main`}</code>
+          </pre>
+        </div>
+
+        <div>
+          <h4 className="text-sm font-medium mb-2">Push an existing repository from the command line</h4>
+          <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
+            <code>{`git remote add origin ${cloneUrl}
+git branch -M main
+git push -u origin main`}</code>
+          </pre>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default async function RepoPage({ params }: { params: Promise<{ username: string; repo: string }> }) {
-  const { username, repo: repoName } = await params;
+export default function RepoPage({ params }: { params: Promise<{ username: string; repo: string }> }) {
+  const { username, repo: repoName } = use(params);
+  const { data, isLoading, error } = useRepoPageData(username, repoName);
 
-  const data = await getRepoPageData(username, repoName);
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
 
-  if (!data) {
+  if (error || !data) {
     notFound();
   }
 
@@ -129,9 +199,7 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
           <div className="border border-border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between gap-4 px-4 py-3 bg-card border-b border-border">
               <BranchSelector branches={branches} currentBranch={repo.defaultBranch} username={username} repoName={repo.name} />
-              <Suspense fallback={<CommitCountSkeleton />}>
-                <CommitCount username={username} repoName={repoName} branch={repo.defaultBranch} />
-              </Suspense>
+              <CommitCount username={username} repoName={repoName} branch={repo.defaultBranch} />
             </div>
 
             {isEmpty ? (
@@ -141,11 +209,7 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
             )}
           </div>
 
-          {readmeOid && (
-            <Suspense fallback={<ReadmeSkeleton />}>
-              <ReadmeSection username={username} repoName={repoName} readmeOid={readmeOid} />
-            </Suspense>
-          )}
+          {readmeOid && <ReadmeSection username={username} repoName={repoName} readmeOid={readmeOid} />}
         </div>
 
         <aside className="space-y-6">
@@ -154,44 +218,6 @@ export default async function RepoPage({ params }: { params: Promise<{ username:
             <p className="text-sm text-muted-foreground">{repo.description || "No description provided."}</p>
           </div>
         </aside>
-      </div>
-    </div>
-  );
-}
-
-function EmptyRepoGuide({ username, repoName }: { username: string; repoName: string }) {
-  const cloneUrl = `${getPublicServerUrl()}/api/git/${username}/${repoName}.git`;
-
-  return (
-    <div className="p-6 space-y-6">
-      <div className="text-center py-8">
-        <GitBranch className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-medium mb-2">This repository is empty</h3>
-        <p className="text-muted-foreground">Get started by cloning or pushing to this repository.</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-sm font-medium mb-2">Create a new repository on the command line</h4>
-          <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-            <code>{`echo "# ${repoName}" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin ${cloneUrl}
-git push -u origin main`}</code>
-          </pre>
-        </div>
-
-        <div>
-          <h4 className="text-sm font-medium mb-2">Push an existing repository from the command line</h4>
-          <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
-            <code>{`git remote add origin ${cloneUrl}
-git branch -M main
-git push -u origin main`}</code>
-          </pre>
-        </div>
       </div>
     </div>
   );

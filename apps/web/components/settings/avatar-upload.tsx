@@ -3,8 +3,9 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateAvatar } from "@/actions/settings";
+import { useUpdateAvatar } from "@/lib/hooks/use-settings";
 import { Camera, Loader2 } from "lucide-react";
+import { mutate } from "swr";
 
 interface AvatarUploadProps {
   currentAvatar?: string | null;
@@ -12,7 +13,7 @@ interface AvatarUploadProps {
 }
 
 export function AvatarUpload({ currentAvatar, name }: AvatarUploadProps) {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useUpdateAvatar();
   const [preview, setPreview] = useState<string | null>(currentAvatar || null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,19 +38,17 @@ export function AvatarUpload({ currentAvatar, name }: AvatarUploadProps) {
     };
     reader.readAsDataURL(file);
 
-    setLoading(true);
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("avatar", file);
-      const result = await updateAvatar(formData);
-      setPreview(result.avatarUrl);
+      const result = await trigger(file);
+      if (result) {
+        setPreview(result.avatarUrl);
+        mutate((key) => typeof key === "string" && key.includes("/settings"));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload avatar");
       setPreview(currentAvatar || null);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -60,7 +59,7 @@ export function AvatarUpload({ currentAvatar, name }: AvatarUploadProps) {
           <AvatarImage src={preview || undefined} alt={name} />
           <AvatarFallback className="text-2xl bg-accent">{name.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
-        {loading && (
+        {isMutating && (
           <div className="absolute inset-0 bg-background/80 rounded-full flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
@@ -69,7 +68,7 @@ export function AvatarUpload({ currentAvatar, name }: AvatarUploadProps) {
 
       <div className="space-y-2">
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isMutating}>
           <Camera className="w-4 h-4 mr-2" />
           Change Avatar
         </Button>

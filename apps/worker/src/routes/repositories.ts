@@ -15,6 +15,12 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
     await next();
   });
 
+  app.use("/api/users/*", async (c, next) => {
+    const db = createDb(c.env.DB.connectionString);
+    c.set("db", db);
+    await next();
+  });
+
   app.post("/api/repositories", authMiddleware, async (c) => {
     const user = c.get("user");
     if (!user) {
@@ -65,6 +71,45 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
     return c.json(repo);
   });
 
+  app.get("/api/repositories/user/:username", authMiddleware, async (c) => {
+    const username = c.req.param("username")!;
+    const db = c.get("db");
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.username, username),
+    });
+
+    if (!user) {
+      return c.json({ repos: [] });
+    }
+
+    const sessionUser = c.get("user");
+    const isOwner = sessionUser?.id === user.id;
+
+    const repos = await db.query.repositories.findMany({
+      where: isOwner ? eq(repositories.ownerId, user.id) : and(eq(repositories.ownerId, user.id), eq(repositories.visibility, "public")),
+      orderBy: [desc(repositories.updatedAt)],
+    });
+
+    const reposWithStars = await Promise.all(
+      repos.map(async (repo) => {
+        const starCountResult = await db.select({ count: count() }).from(stars).where(eq(stars.repositoryId, repo.id));
+        return {
+          ...repo,
+          starCount: starCountResult[0]?.count ?? 0,
+          owner: {
+            id: user.id,
+            username: user.username,
+            name: user.name,
+            image: user.image,
+          },
+        };
+      })
+    );
+
+    return c.json({ repos: reposWithStars });
+  });
+
   app.get("/api/repositories/:owner/:name", authMiddleware, async (c) => {
     const owner = c.req.param("owner")!;
     const name = c.req.param("name")!;
@@ -102,36 +147,6 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
         image: user.image,
       },
     });
-  });
-
-  app.get("/api/repositories/user/:username", authMiddleware, async (c) => {
-    const username = c.req.param("username")!;
-    const db = c.get("db");
-
-    const user = await db.query.users.findFirst({
-      where: eq(users.username, username),
-    });
-
-    if (!user) {
-      return c.json({ repos: [] });
-    }
-
-    const sessionUser = c.get("user");
-    const isOwner = sessionUser?.id === user.id;
-
-    const repos = await db.query.repositories.findMany({
-      where: isOwner ? eq(repositories.ownerId, user.id) : and(eq(repositories.ownerId, user.id), eq(repositories.visibility, "public")),
-      orderBy: [desc(repositories.updatedAt)],
-    });
-
-    const reposWithStars = await Promise.all(
-      repos.map(async (repo) => {
-        const starCountResult = await db.select({ count: count() }).from(stars).where(eq(stars.repositoryId, repo.id));
-        return { ...repo, starCount: starCountResult[0]?.count ?? 0 };
-      })
-    );
-
-    return c.json({ repos: reposWithStars });
   });
 
   app.delete("/api/repositories/:id", authMiddleware, async (c) => {
@@ -554,10 +569,7 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
     const name = c.req.param("name")!;
     const db = c.get("db");
 
-    const [user, sessionUser] = await Promise.all([
-      db.query.users.findFirst({ where: eq(users.username, owner) }),
-      c.get("user"),
-    ]);
+    const [user, sessionUser] = await Promise.all([db.query.users.findFirst({ where: eq(users.username, owner) }), c.get("user")]);
 
     if (!user) {
       return c.json({ error: "Repository not found" }, 404);
@@ -584,10 +596,7 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
     let readmeOid: string | null = null;
 
     try {
-      const [branchList, commits] = await Promise.all([
-        git.listBranches({ fs, gitdir: "/" }),
-        git.log({ fs, gitdir: "/", ref: repo.defaultBranch, depth: 1 }),
-      ]);
+      const [branchList, commits] = await Promise.all([git.listBranches({ fs, gitdir: "/" }), git.log({ fs, gitdir: "/", ref: repo.defaultBranch, depth: 1 })]);
 
       branches = branchList;
 
@@ -781,6 +790,7 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
   app.get("/api/users/:username/profile", authMiddleware, async (c) => {
     const username = c.req.param("username")!;
     const db = c.get("db");
+    const sessionUser = c.get("user");
 
     const user = await db.query.users.findFirst({
       where: eq(users.username, username),
@@ -790,7 +800,64 @@ export function registerRepositoryRoutes(app: Hono<AppEnv>) {
       return c.json({ error: "User not found" }, 404);
     }
 
-    return c.json(user);
+    const isOwnProfile = sessionUser?.id === user.id;
+
+    return c.json({
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      image: user.image,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      location: user.location,
+      website: user.website,
+      pronouns: user.pronouns,
+      socialLinks: user.socialLinks,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      ...(isOwnProfile ? { email: user.email, emailVerified: user.emailVerified } : {}),
+    });
+  });
+
+  app.get("/api/users/public", async (c) => {
+    const db = createDb(c.env.DB.connectionString);
+    const sortBy = (c.req.query("sortBy") || "newest") as "newest" | "oldest";
+    const limit = parseInt(c.req.query("limit") || "20", 10);
+    const offset = parseInt(c.req.query("offset") || "0", 10);
+
+    const allUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        username: users.username,
+        image: users.image,
+        avatarUrl: users.avatarUrl,
+        bio: users.bio,
+        createdAt: users.createdAt,
+        repoCount: sql<number>`(SELECT COUNT(*) FROM repositories WHERE repositories.owner_id = users.id AND repositories.visibility = 'public')`.as(
+          "repo_count"
+        ),
+      })
+      .from(users)
+      .orderBy(sortBy === "newest" ? desc(users.createdAt) : users.createdAt)
+      .limit(limit + 1)
+      .offset(offset);
+
+    const hasMore = allUsers.length > limit;
+    const result = allUsers.slice(0, limit);
+
+    return c.json({
+      users: result.map((u) => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        image: u.image,
+        avatarUrl: u.avatarUrl,
+        bio: u.bio,
+        createdAt: u.createdAt,
+        repoCount: Number(u.repoCount),
+      })),
+      hasMore,
+    });
   });
 }
-

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { type AppEnv } from "./types";
 import { registerHealthRoutes } from "./routes/health";
 import { registerGitRoutes } from "./routes/git";
@@ -9,6 +10,17 @@ import { registerRepositoryRoutes } from "./routes/repositories";
 import { registerSettingsRoutes } from "./routes/settings";
 
 const app = new Hono<AppEnv>();
+
+app.use(
+  "/api/*",
+  cors({
+    origin: (origin) => origin || "",
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposeHeaders: ["Set-Cookie"],
+    credentials: true,
+  })
+);
 
 registerHealthRoutes(app);
 registerAvatarRoutes(app);

@@ -4,9 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateSocialLinks } from "@/actions/settings";
+import { useUpdateSocialLinks } from "@/lib/hooks/use-settings";
 import { Loader2, Link } from "lucide-react";
 import { GithubIcon, LinkedInIcon, XIcon } from "../icons";
+import { mutate } from "swr";
 
 interface SocialLinksFormProps {
   socialLinks?: {
@@ -18,32 +19,30 @@ interface SocialLinksFormProps {
 }
 
 export function SocialLinksForm({ socialLinks }: SocialLinksFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useUpdateSocialLinks();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [customLinks, setCustomLinks] = useState<string[]>([socialLinks?.custom?.[0] || "", socialLinks?.custom?.[1] || "", socialLinks?.custom?.[2] || ""]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(false);
 
     const formData = new FormData(e.currentTarget);
 
     try {
-      await updateSocialLinks({
+      await trigger({
         github: formData.get("github") as string,
         twitter: formData.get("twitter") as string,
         linkedin: formData.get("linkedin") as string,
         custom: customLinks.filter(Boolean),
       });
+      mutate((key) => typeof key === "string" && key.includes("/settings"));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update social links");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -98,8 +97,8 @@ export function SocialLinksForm({ socialLinks }: SocialLinksFormProps) {
 
       {success && <div className="text-sm text-green-500 bg-green-500/10 border border-green-500/20 rounded-md px-3 py-2">Social links updated!</div>}
 
-      <Button type="submit" disabled={loading}>
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      <Button type="submit" disabled={isMutating}>
+        {isMutating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Save Social Links
       </Button>
     </form>

@@ -1,7 +1,9 @@
-import { Suspense } from "react";
-import { connection } from "next/server";
+"use client";
+
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getPublicRepositories, getPublicUsers } from "@/actions/repositories";
+import { usePublicRepositories } from "@/lib/hooks/use-repositories";
+import { usePublicUsers } from "@/lib/hooks/use-users";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,10 +21,16 @@ const USER_SORT_OPTIONS = [
   { value: "oldest", label: "Oldest", icon: Clock },
 ] as const;
 
-async function RepoGrid({ sortBy, page, perPage }: { sortBy: "stars" | "updated" | "created"; page: number; perPage: number }) {
-  await connection();
+function RepoGrid({ sortBy, page, perPage }: { sortBy: "stars" | "updated" | "created"; page: number; perPage: number }) {
   const offset = (page - 1) * perPage;
-  const { repos, hasMore } = await getPublicRepositories(sortBy, perPage, offset);
+  const { data, isLoading } = usePublicRepositories(sortBy, perPage, offset);
+
+  if (isLoading) {
+    return <GridSkeleton />;
+  }
+
+  const repos = data?.repos || [];
+  const hasMore = data?.hasMore || false;
 
   if (repos.length === 0) {
     return (
@@ -89,10 +97,16 @@ async function RepoGrid({ sortBy, page, perPage }: { sortBy: "stars" | "updated"
   );
 }
 
-async function UserGrid({ sortBy, page, perPage }: { sortBy: "newest" | "oldest"; page: number; perPage: number }) {
-  await connection();
+function UserGrid({ sortBy, page, perPage }: { sortBy: "newest" | "oldest"; page: number; perPage: number }) {
   const offset = (page - 1) * perPage;
-  const { users, hasMore } = await getPublicUsers(sortBy, perPage, offset);
+  const { data, isLoading } = usePublicUsers(sortBy, perPage, offset);
+
+  if (isLoading) {
+    return <UserGridSkeleton />;
+  }
+
+  const users = data?.users || [];
+  const hasMore = data?.hasMore || false;
 
   if (users.length === 0) {
     return (
@@ -196,12 +210,14 @@ function UserGridSkeleton() {
   );
 }
 
-export default async function ExplorePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string; sort?: string; page?: string; usort?: string; upage?: string }>;
-}) {
-  const { tab, sort: sortParam, page: pageParam, usort: usortParam, upage: upageParam } = await searchParams;
+export default function ExplorePage() {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+  const sortParam = searchParams.get("sort");
+  const pageParam = searchParams.get("page");
+  const usortParam = searchParams.get("usort");
+  const upageParam = searchParams.get("upage");
+
   const activeTab = tab === "users" ? "users" : "repositories";
   const sortBy = (["stars", "updated", "created"].includes(sortParam || "") ? sortParam : "stars") as "stars" | "updated" | "created";
   const page = parseInt(pageParam || "1", 10);
@@ -247,9 +263,7 @@ export default async function ExplorePage({
             ))}
           </div>
 
-          <Suspense fallback={<GridSkeleton />}>
-            <RepoGrid sortBy={sortBy} page={page} perPage={perPage} />
-          </Suspense>
+          <RepoGrid sortBy={sortBy} page={page} perPage={perPage} />
         </TabsContent>
 
         <TabsContent value="users">
@@ -264,9 +278,7 @@ export default async function ExplorePage({
             ))}
           </div>
 
-          <Suspense fallback={<UserGridSkeleton />}>
-            <UserGrid sortBy={userSortBy} page={userPage} perPage={perPage} />
-          </Suspense>
+          <UserGrid sortBy={userSortBy} page={userPage} perPage={perPage} />
         </TabsContent>
       </Tabs>
     </div>

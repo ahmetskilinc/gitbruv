@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { updateProfile } from "@/actions/settings";
+import { useUpdateProfile } from "@/lib/hooks/use-settings";
 import { Loader2 } from "lucide-react";
+import { mutate } from "swr";
 
 interface ProfileFormProps {
   user: {
@@ -20,20 +21,19 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useUpdateProfile();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(false);
 
     const formData = new FormData(e.currentTarget);
 
     try {
-      await updateProfile({
+      await trigger({
         name: formData.get("name") as string,
         username: formData.get("username") as string,
         bio: formData.get("bio") as string,
@@ -41,12 +41,11 @@ export function ProfileForm({ user }: ProfileFormProps) {
         website: formData.get("website") as string,
         pronouns: formData.get("pronouns") as string,
       });
+      mutate((key) => typeof key === "string" && key.includes("/settings"));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -140,11 +139,10 @@ export function ProfileForm({ user }: ProfileFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={loading}>
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      <Button type="submit" disabled={isMutating}>
+        {isMutating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Save Changes
       </Button>
     </form>
   );
 }
-

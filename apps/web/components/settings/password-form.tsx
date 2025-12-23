@@ -4,17 +4,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updatePassword } from "@/actions/settings";
+import { useUpdatePassword } from "@/lib/hooks/use-settings";
 import { Loader2 } from "lucide-react";
 
 export function PasswordForm() {
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useUpdatePassword();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(false);
 
@@ -25,25 +24,21 @@ export function PasswordForm() {
 
     if (newPassword !== confirmPassword) {
       setError("New passwords do not match");
-      setLoading(false);
       return;
     }
 
     if (newPassword.length < 8) {
       setError("Password must be at least 8 characters");
-      setLoading(false);
       return;
     }
 
     try {
-      await updatePassword({ currentPassword, newPassword });
+      await trigger({ currentPassword, newPassword });
       setSuccess(true);
       (e.target as HTMLFormElement).reset();
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update password");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -96,11 +91,10 @@ export function PasswordForm() {
         </div>
       )}
 
-      <Button type="submit" disabled={loading}>
-        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+      <Button type="submit" disabled={isMutating}>
+        {isMutating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Update Password
       </Button>
     </form>
   );
 }
-

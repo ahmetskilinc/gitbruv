@@ -1,15 +1,14 @@
-import { Suspense } from "react";
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
-import { connection } from "next/server";
 import Link from "next/link";
-import { getRepository, getRepoFile, getRepoBranches } from "@/actions/repositories";
+import { useRepositoryWithStars, useRepoFile, useRepoBranches } from "@/lib/hooks/use-repositories";
 import { ChunkedCodeViewer } from "@/components/chunked-code-viewer";
 import { CodeViewer } from "@/components/code-viewer";
 import { BranchSelector } from "@/components/branch-selector";
 import { Badge } from "@/components/ui/badge";
 import { Lock, Globe, ChevronRight, Home, FileCode, Loader2 } from "lucide-react";
-
-export const revalidate = 3600;
 
 const LANGUAGE_MAP: Record<string, string> = {
   ts: "typescript",
@@ -39,35 +38,6 @@ function getLanguage(filename: string): string {
   return LANGUAGE_MAP[ext] || "text";
 }
 
-async function FileContent({ username, repoName, branch, filePath }: { username: string; repoName: string; branch: string; filePath: string }) {
-  await connection();
-  const file = await getRepoFile(username, repoName, branch, filePath);
-
-  if (!file) {
-    notFound();
-  }
-
-  const fileName = filePath.split("/").pop() || "";
-  const language = getLanguage(fileName);
-  const fileSize = new TextEncoder().encode(file.content).length;
-
-  if (fileSize > SMALL_FILE_THRESHOLD) {
-    return (
-      <ChunkedCodeViewer
-        username={username}
-        repoName={repoName}
-        branch={branch}
-        filePath={filePath}
-        language={language}
-        initialContent={file.content}
-        totalSize={fileSize}
-      />
-    );
-  }
-
-  return <CodeViewer content={file.content} language={language} showLineNumbers />;
-}
-
 function CodeSkeleton() {
   return (
     <div className="p-4 min-h-[400px] flex items-center justify-center">
@@ -76,19 +46,42 @@ function CodeSkeleton() {
   );
 }
 
-export default async function BlobPage({ params }: { params: Promise<{ username: string; repo: string; path: string[] }> }) {
-  const { username, repo: repoName, path: pathSegments } = await params;
+function PageSkeleton() {
+  return (
+    <div className="container px-4 py-6">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+      </div>
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="h-12 bg-card border-b border-border" />
+        <CodeSkeleton />
+      </div>
+    </div>
+  );
+}
+
+export default function BlobPage({ params }: { params: Promise<{ username: string; repo: string; path: string[] }> }) {
+  const { username, repo: repoName, path: pathSegments } = use(params);
   const branch = pathSegments[0];
   const filePath = pathSegments.slice(1).join("/");
 
-  const [repo, branches] = await Promise.all([getRepository(username, repoName), getRepoBranches(username, repoName)]);
+  const { data: repo, isLoading: repoLoading, error: repoError } = useRepositoryWithStars(username, repoName);
+  const { data: branchesData, isLoading: branchesLoading } = useRepoBranches(username, repoName);
+  const { data: fileData, isLoading: fileLoading, error: fileError } = useRepoFile(username, repoName, branch, filePath);
 
-  if (!repo) {
+  if (repoLoading || branchesLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (repoError || !repo) {
     notFound();
   }
 
+  const branches = branchesData?.branches || [];
   const pathParts = filePath.split("/").filter(Boolean);
   const fileName = pathParts[pathParts.length - 1];
+  const language = getLanguage(fileName);
 
   return (
     <div className="container px-4 py-6">
@@ -147,9 +140,29 @@ export default async function BlobPage({ params }: { params: Promise<{ username:
           </div>
         </div>
 
-        <Suspense fallback={<CodeSkeleton />}>
-          <FileContent username={username} repoName={repoName} branch={branch} filePath={filePath} />
-        </Suspense>
+        {fileLoading ? (
+          <CodeSkeleton />
+        ) : fileError || !fileData ? (
+          <div className="p-8 text-center text-muted-foreground">Failed to load file</div>
+        ) : (
+          (() => {
+            const fileSize = new TextEncoder().encode(fileData.content).length;
+            if (fileSize > SMALL_FILE_THRESHOLD) {
+              return (
+                <ChunkedCodeViewer
+                  username={username}
+                  repoName={repoName}
+                  branch={branch}
+                  filePath={filePath}
+                  language={language}
+                  initialContent={fileData.content}
+                  totalSize={fileSize}
+                />
+              );
+            }
+            return <CodeViewer content={fileData.content} language={language} showLineNumbers />;
+          })()
+        )}
       </div>
     </div>
   );

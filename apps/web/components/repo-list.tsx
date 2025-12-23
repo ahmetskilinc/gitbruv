@@ -9,7 +9,7 @@ type Repository = {
   name: string;
   description: string | null;
   visibility: "public" | "private";
-  updatedAt: Date;
+  updatedAt: Date | string;
   starCount?: number;
   owner?: {
     username: string;

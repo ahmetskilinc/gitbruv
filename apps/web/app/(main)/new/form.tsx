@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createRepository } from "@/actions/repositories";
+import { useCreateRepository } from "@/lib/hooks/use-repositories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2, Lock, Globe } from "lucide-react";
 import Link from "next/link";
+import { mutate } from "swr";
 
 export function NewRepoForm({ username }: { username: string }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { trigger, isMutating } = useCreateRepository();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -22,21 +23,19 @@ export function NewRepoForm({ username }: { username: string }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      await createRepository({
+      await trigger({
         name: formData.name,
         description: formData.description || undefined,
         visibility: formData.visibility,
       });
 
+      mutate((key) => typeof key === "string" && key.includes("/repositories"));
       toast.success("Repository created!");
       router.push(`/${username}/${formData.name.toLowerCase().replace(/\s+/g, "-")}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create repository");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -151,8 +150,8 @@ export function NewRepoForm({ username }: { username: string }) {
           <Button type="button" variant="ghost" asChild>
             <Link href="/">Cancel</Link>
           </Button>
-          <Button type="submit" disabled={loading || !formData.name} className="min-w-[160px]">
-            {loading ? (
+          <Button type="submit" disabled={isMutating || !formData.name} className="min-w-[160px]">
+            {isMutating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
@@ -166,4 +165,3 @@ export function NewRepoForm({ username }: { username: string }) {
     </div>
   );
 }
-
