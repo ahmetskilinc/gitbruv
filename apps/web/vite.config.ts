@@ -15,13 +15,12 @@ export default defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
-    tanstackStart(),
-    viteReact(),
     tanstackStart({
       srcDirectory: ".",
       router: {
         routesDirectory: "app",
       },
     }),
+    viteReact(),
   ],
 });
