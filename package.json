@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:web": "turbo dev --filter=@gitbruv/web",
-    "dev:worker": "turbo dev --filter=@gitbruv/worker",
+    "dev:api": "turbo dev --filter=@gitbruv/api",
     "build": "turbo build",
     "lint": "turbo lint",
     "db:generate": "turbo db:generate --filter=@gitbruv/db",

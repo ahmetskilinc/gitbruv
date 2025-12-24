@@ -9,6 +9,29 @@
         "typescript": "^5",
       },
     },
+    "apps/api": {
+      "name": "@gitbruv/api",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aws-sdk/client-s3": "^3.712.0",
+        "@gitbruv/auth": "workspace:*",
+        "@gitbruv/db": "workspace:*",
+        "@hono/node-server": "^1.13.7",
+        "bcryptjs": "^3.0.3",
+        "dotenv": "^16.4.7",
+        "drizzle-orm": "^0.45.1",
+        "hono": "^4.11.1",
+        "isomorphic-git": "^1.36.1",
+        "postgres": "^3.4.7",
+      },
+      "devDependencies": {
+        "@types/bcryptjs": "^3.0.0",
+        "@types/node": "^25",
+        "tsup": "^8.3.5",
+        "tsx": "^4.19.2",
+        "typescript": "^5",
+      },
+    },
     "apps/web": {
       "name": "@gitbruv/web",
       "version": "0.1.0",
@@ -65,29 +88,6 @@
         "typescript": "^5",
         "vite": "^7.1.7",
         "vite-tsconfig-paths": "^5.1.4",
-      },
-    },
-    "apps/worker": {
-      "name": "@gitbruv/api",
-      "version": "0.1.0",
-      "dependencies": {
-        "@aws-sdk/client-s3": "^3.712.0",
-        "@gitbruv/auth": "workspace:*",
-        "@gitbruv/db": "workspace:*",
-        "@hono/node-server": "^1.13.7",
-        "bcryptjs": "^3.0.3",
-        "dotenv": "^16.4.7",
-        "drizzle-orm": "^0.45.1",
-        "hono": "^4.11.1",
-        "isomorphic-git": "^1.36.1",
-        "postgres": "^3.4.7",
-      },
-      "devDependencies": {
-        "@types/bcryptjs": "^3.0.0",
-        "@types/node": "^25",
-        "tsup": "^8.3.5",
-        "tsx": "^4.19.2",
-        "typescript": "^5",
       },
     },
     "packages/auth": {
@@ -357,7 +357,7 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
 
-    "@gitbruv/api": ["@gitbruv/api@workspace:apps/worker"],
+    "@gitbruv/api": ["@gitbruv/api@workspace:apps/api"],
 
     "@gitbruv/auth": ["@gitbruv/auth@workspace:packages/auth"],
 
