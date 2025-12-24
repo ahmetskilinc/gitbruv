@@ -14,8 +14,7 @@
     "db:generate": "turbo db:generate --filter=@gitbruv/db",
     "db:migrate": "turbo db:migrate --filter=@gitbruv/db",
     "db:push": "turbo db:push --filter=@gitbruv/db",
-    "db:studio": "turbo db:studio --filter=@gitbruv/db",
-    "cleanup:accounts": "turbo cleanup:accounts --filter=@gitbruv/db"
+    "db:studio": "turbo db:studio --filter=@gitbruv/db"
   },
   "devDependencies": {
     "turbo": "^2.3.3",
