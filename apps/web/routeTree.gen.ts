@@ -19,6 +19,7 @@ import { Route as MainUsernameRouteImport } from './app/_main/$username'
 import { Route as AuthRegisterRouteImport } from './app/_auth/register'
 import { Route as AuthLoginRouteImport } from './app/_auth/login'
 import { Route as MainSettingsIndexRouteImport } from './app/_main/settings/index'
+import { Route as MainUsernameIndexRouteImport } from './app/_main/$username/index'
 import { Route as ApiAuthSplatRouteImport } from './app/api/auth/$'
 import { Route as MainSettingsAccountRouteImport } from './app/_main/settings/account'
 import { Route as MainUsernameRepoRouteImport } from './app/_main/$username/$repo'
@@ -76,6 +77,11 @@ const MainSettingsIndexRoute = MainSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MainSettingsRoute,
 } as any)
+const MainUsernameIndexRoute = MainUsernameIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainUsernameRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/$username/$repo': typeof MainUsernameRepoRouteWithChildren
   '/settings/account': typeof MainSettingsAccountRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$username/': typeof MainUsernameIndexRoute
   '/settings/': typeof MainSettingsIndexRoute
   '/$username/$repo/commits': typeof MainUsernameRepoCommitsRouteWithChildren
   '/$username/$repo/settings': typeof MainUsernameRepoSettingsRoute
@@ -142,13 +149,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
-  '/$username': typeof MainUsernameRouteWithChildren
   '/explore': typeof MainExploreRoute
   '/new': typeof MainNewRoute
   '/': typeof MainIndexRoute
   '/$username/$repo': typeof MainUsernameRepoRouteWithChildren
   '/settings/account': typeof MainSettingsAccountRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/$username': typeof MainUsernameIndexRoute
   '/settings': typeof MainSettingsIndexRoute
   '/$username/$repo/commits': typeof MainUsernameRepoCommitsRouteWithChildren
   '/$username/$repo/settings': typeof MainUsernameRepoSettingsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesById {
   '/_main/$username/$repo': typeof MainUsernameRepoRouteWithChildren
   '/_main/settings/account': typeof MainSettingsAccountRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_main/$username/': typeof MainUsernameIndexRoute
   '/_main/settings/': typeof MainSettingsIndexRoute
   '/_main/$username/$repo/commits': typeof MainUsernameRepoCommitsRouteWithChildren
   '/_main/$username/$repo/settings': typeof MainUsernameRepoSettingsRoute
@@ -190,6 +198,7 @@ export interface FileRouteTypes {
     | '/$username/$repo'
     | '/settings/account'
     | '/api/auth/$'
+    | '/$username/'
     | '/settings/'
     | '/$username/$repo/commits'
     | '/$username/$repo/settings'
@@ -200,13 +209,13 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/register'
-    | '/$username'
     | '/explore'
     | '/new'
     | '/'
     | '/$username/$repo'
     | '/settings/account'
     | '/api/auth/$'
+    | '/$username'
     | '/settings'
     | '/$username/$repo/commits'
     | '/$username/$repo/settings'
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/_main/$username/$repo'
     | '/_main/settings/account'
     | '/api/auth/$'
+    | '/_main/$username/'
     | '/_main/settings/'
     | '/_main/$username/$repo/commits'
     | '/_main/$username/$repo/settings'
@@ -312,6 +322,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof MainSettingsIndexRouteImport
       parentRoute: typeof MainSettingsRoute
+    }
+    '/_main/$username/': {
+      id: '/_main/$username/'
+      path: '/'
+      fullPath: '/$username/'
+      preLoaderRoute: typeof MainUsernameIndexRouteImport
+      parentRoute: typeof MainUsernameRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -417,10 +434,12 @@ const MainUsernameRepoRouteWithChildren =
 
 interface MainUsernameRouteChildren {
   MainUsernameRepoRoute: typeof MainUsernameRepoRouteWithChildren
+  MainUsernameIndexRoute: typeof MainUsernameIndexRoute
 }
 
 const MainUsernameRouteChildren: MainUsernameRouteChildren = {
   MainUsernameRepoRoute: MainUsernameRepoRouteWithChildren,
+  MainUsernameIndexRoute: MainUsernameIndexRoute,
 }
 
 const MainUsernameRouteWithChildren = MainUsernameRoute._addFileChildren(
