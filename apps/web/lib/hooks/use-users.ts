@@ -1,8 +1,8 @@
 import useSWR from "swr";
 import { fetcher, type UserProfile, type PublicUser, type RepositoryWithStars } from "@/lib/api/client";
-import { getWorkerUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/utils";
 
-const API_URL = getWorkerUrl() || "";
+const API_URL = getApiUrl() || "";
 
 export function useUserProfile(username: string) {
   return useSWR<UserProfile>(username ? `${API_URL}/api/users/${username}/profile` : null, fetcher);

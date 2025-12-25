@@ -6,23 +6,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getPublicServerUrl = () => {
-  if (import.meta.env.VITE_ENV === "production") {
-    return `https://${import.meta.env.RAILWAY_PUBLIC_DOMAIN}`;
+  if (import.meta.env.VITE_PUBLIC_ENV === "production") {
+    return `https://${import.meta.env.VITE_RAILWAY_PUBLIC_DOMAIN}`;
   } else {
     return `http://localhost:3000`;
   }
 };
 
-export const getWorkerUrl = () => {
-  if (import.meta.env.VITE_ENV === "production") {
-    return `https://${import.meta.env.VITE_API_URL}`;
+export const getApiUrl = () => {
+  if (import.meta.env.VITE_PUBLIC_ENV === "production") {
+    return `https://${import.meta.env.VITE_PUBLIC_API_URL}`;
   } else {
     return `http://localhost:3001`;
   }
 };
 
 export const getGitUrl = () => {
-  const workerUrl = getWorkerUrl();
+  const workerUrl = getApiUrl();
   if (workerUrl) {
     return workerUrl;
   }

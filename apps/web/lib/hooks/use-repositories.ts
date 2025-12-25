@@ -1,9 +1,9 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { api, fetcher, type RepoPageData, type RepositoryWithOwner, type RepositoryWithStars, type FileEntry, type Commit } from "@/lib/api/client";
-import { getWorkerUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/utils";
 
-const API_URL = getWorkerUrl() || "";
+const API_URL = getApiUrl() || "";
 
 export function useRepoPageData(owner: string, name: string) {
   return useSWR<RepoPageData>(owner && name ? `${API_URL}/api/repositories/${owner}/${name}/page-data` : null, fetcher);

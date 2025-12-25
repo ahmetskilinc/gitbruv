@@ -1,9 +1,9 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { api, fetcher, type UserProfile } from "@/lib/api/client";
-import { getWorkerUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/utils";
 
-const API_URL = getWorkerUrl() || "";
+const API_URL = getApiUrl() || "";
 
 export function useCurrentUser() {
   return useSWR<UserProfile>(`${API_URL}/api/settings/current-user`, fetcher);

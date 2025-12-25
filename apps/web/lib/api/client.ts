@@ -1,7 +1,7 @@
-import { getWorkerUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 
-const API_URL = getWorkerUrl() || "";
+const API_URL = getApiUrl() || "";
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   try {

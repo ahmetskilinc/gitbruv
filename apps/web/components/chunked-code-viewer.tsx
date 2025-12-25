@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { CodeViewer } from "./code-viewer";
 import { Loader2 } from "lucide-react";
-import { getWorkerUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/utils";
 
 const CHUNK_SIZE = 64 * 1024;
 const LARGE_FILE_THRESHOLD = 100 * 1024;
@@ -31,7 +31,7 @@ export function ChunkedCodeViewer({ username, repoName, branch, filePath, langua
     setError(null);
 
     try {
-      const workerUrl = getWorkerUrl();
+      const workerUrl = getApiUrl();
       const response = await fetch(`${workerUrl}/file/${username}/${repoName}/${branch}/${filePath}`);
 
       if (!response.ok) {
