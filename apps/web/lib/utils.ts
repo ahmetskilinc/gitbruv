@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getPublicServerUrl = () => {
-  if (import.meta.env.VITE_PUBLIC_ENV === "production") {
+  if (import.meta.env.VITE_PUBLIC_ENV === "production" || import.meta.env.NODE_ENV === "production") {
     return `https://${import.meta.env.VITE_RAILWAY_PUBLIC_DOMAIN}`;
   } else {
     return `http://localhost:3000`;
@@ -14,7 +14,7 @@ export const getPublicServerUrl = () => {
 };
 
 export const getApiUrl = () => {
-  if (import.meta.env.VITE_PUBLIC_ENV === "production") {
+  if (import.meta.env.VITE_PUBLIC_ENV === "production" || import.meta.env.NODE_ENV === "production") {
     return `https://${import.meta.env.VITE_PUBLIC_API_URL}`;
   } else {
     return `http://localhost:3001`;
