@@ -7,7 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node dist/server/server.js",
+    "start": "node .output/server/index.mjs",
     "test": "vitest run",
     "lint": "eslint"
   },

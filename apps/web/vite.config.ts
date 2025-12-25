@@ -22,7 +22,7 @@ export default defineConfig({
         routesDirectory: "app",
       },
     }),
-    nitro({ preset: "bun" }),
+    nitro(),
     viteReact(),
   ],
 });

@@ -23,10 +23,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=builder /app/apps/web/.output ./apps/web/.output
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder /app/apps/web/server.ts ./apps/web/server.ts
 
 ENV NODE_ENV=production
 EXPOSE 3000
 WORKDIR /app/apps/web
 
-CMD ["bun", "run", "server.ts"]
+CMD ["bun", "run", ".output/server/index.mjs"]
