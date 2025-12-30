@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const getPublicServerUrl = () => {
-  console.log("PUBLIC SERVER URL", process.env.NODE_ENV, process.env.RAILWAY_PUBLIC_DOMAIN);
+  console.log("PUBLIC SERVER URL", process.env.NODE_ENV, process.env.RAILWAY_PUBLIC_DOMAIN, import.meta.env.VITE_RAILWAY_PUBLIC_DOMAIN);
   if (process.env.NODE_ENV === "production") {
     if (process.env.RAILWAY_PUBLIC_DOMAIN) {
       return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
@@ -19,7 +19,7 @@ export const getPublicServerUrl = () => {
 };
 
 export const getApiUrl = () => {
-  console.log("API URL", process.env.NODE_ENV, process.env.API_URL);
+  console.log("API URL", process.env.NODE_ENV, process.env.API_URL, import.meta.env.VITE_API_URL);
   if (process.env.NODE_ENV === "production") {
     if (process.env.API_URL) {
       return `https://${process.env.API_URL}`;
