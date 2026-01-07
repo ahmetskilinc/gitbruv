@@ -1,7 +1,4 @@
-import { getApiUrl } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-
-const API_URL = getApiUrl() || "";
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   try {
@@ -15,7 +12,7 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const authHeaders = await getAuthHeaders();
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const res = await fetch(endpoint, {
     ...options,
     credentials: "include",
     headers: {
@@ -201,7 +198,7 @@ export const api = {
       const authHeaders = await getAuthHeaders();
       const formData = new FormData();
       formData.append("avatar", file);
-      const res = await fetch(`${API_URL}/api/settings/avatar`, {
+      const res = await fetch("/api/settings/avatar", {
         method: "POST",
         credentials: "include",
         headers: authHeaders,

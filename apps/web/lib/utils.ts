@@ -25,6 +25,8 @@ export const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return normalizeUrl(import.meta.env.VITE_API_URL);
   }
+
+  return "http://localhost:3001";
 };
 
 export const getGitUrl = () => {

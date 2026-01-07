@@ -3,7 +3,7 @@ import useSWRMutation from "swr/mutation";
 import { api, fetcher, type RepoPageData, type RepositoryWithOwner, type RepositoryWithStars, type FileEntry, type Commit } from "@/lib/api/client";
 import { getApiUrl } from "@/lib/utils";
 
-const API_URL = getApiUrl() || "";
+const API_URL = getApiUrl();
 
 export function useRepoPageData(owner: string, name: string) {
   return useSWR<RepoPageData>(owner && name ? `${API_URL}/api/repositories/${owner}/${name}/page-data` : null, fetcher);
@@ -66,7 +66,7 @@ export function useCreateRepository() {
 export function useUpdateRepository(id: string) {
   return useSWRMutation(
     `${API_URL}/api/repositories/${id}`,
-    (_, { arg }: { arg: { name?: string; description?: string; visibility?: "public" | "private" } }) => api.repositories.update(id, arg)
+    (_: any, { arg }: { arg: { name?: string; description?: string; visibility?: "public" | "private" } }) => api.repositories.update(id, arg)
   );
 }
 
