@@ -113,8 +113,12 @@ export function registerSettingsRoutes(app: Hono<AppEnv>) {
         ContentType: file.type,
       })
     );
+    const origin =
+      c.req.header("origin") ||
+      c.req.header("x-forwarded-host") && `https://${c.req.header("x-forwarded-host")}` ||
+      new URL(c.req.url).origin;
 
-    const workerUrl = c.req.url.split("/api")[0];
+    const workerUrl = url.origin;
     const avatarUrl = `${workerUrl}/avatar/${user.id}.${ext}`;
 
     const db = c.get("db");
