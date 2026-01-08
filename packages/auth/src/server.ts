@@ -4,6 +4,14 @@ import { apiKey } from "better-auth/plugins";
 import { db, users, sessions, accounts, verifications, apiKeys } from "@gitbruv/db";
 import { APIError } from "better-auth/api";
 
+const normalizeUrl = (url: string) => {
+  if (url.startsWith("http")) return url;
+  if (url.includes("localhost") || url.startsWith("127.0.0.1") || url.startsWith("::1")) {
+    return `http://${url}`;
+  }
+  return `https://${url}`;
+};
+
 const BLOCKED_EMAIL_DOMAINS = [
   "tempmail.com",
   "temp-mail.org",
@@ -82,11 +90,11 @@ const getTrustedOrigins = (): string[] => {
   const origins: string[] = ["http://localhost:3000"];
 
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    origins.push(process.env.RAILWAY_PUBLIC_DOMAIN);
+    origins.push(normalizeUrl(process.env.RAILWAY_PUBLIC_DOMAIN));
   }
 
   if (process.env.API_URL) {
-    origins.push(process.env.API_URL);
+    origins.push(normalizeUrl(process.env.API_URL));
   }
 
   return origins;
