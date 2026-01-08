@@ -106,7 +106,7 @@ function PageSkeleton() {
 }
 
 function EmptyRepoGuide({ username, repoName }: { username: string; repoName: string }) {
-  const cloneUrl = `${getPublicServerUrl()}/api/git/${username}/${repoName}.git`;
+  const cloneUrl = `${getPublicServerUrl()}/${username}/${repoName}.git`;
 
   return (
     <div className="p-6 space-y-6">

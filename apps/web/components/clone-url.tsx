@@ -11,8 +11,7 @@ export function CloneUrl({ username, repoName }: { username: string; repoName: s
   const [copied, setCopied] = useState(false);
   // const [protocol, setProtocol] = useState<"https" | "ssh">("https");
 
-  const gitUrl = getPublicServerUrl() + "/api/git";
-  const httpsUrl = `${gitUrl}/${username}/${repoName}.git`;
+  const httpsUrl = `${getPublicServerUrl()}/${username}/${repoName}.git`;
   // const sshUrl = `git@gitbruv.local:${username}/${repoName}.git`;
 
   const url = httpsUrl;

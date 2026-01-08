@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './app/__root'
 import { Route as MainRouteImport } from './app/_main'
 import { Route as AuthRouteImport } from './app/_auth'
+import { Route as SplatRouteImport } from './app/$'
 import { Route as MainIndexRouteImport } from './app/_main/index'
 import { Route as ApiSplatRouteImport } from './app/api/$'
 import { Route as MainSettingsRouteImport } from './app/_main/settings'
@@ -38,6 +39,11 @@ const MainRoute = MainRouteImport.update({
 } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MainIndexRoute = MainIndexRouteImport.update({
@@ -146,6 +152,7 @@ const MainUsernameRepoBlobSplatRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/$': typeof SplatRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/$username': typeof MainUsernameRouteWithChildren
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/$username/$repo/tree/$': typeof MainUsernameRepoTreeSplatRoute
 }
 export interface FileRoutesByTo {
+  '/$': typeof SplatRoute
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/explore': typeof MainExploreRoute
@@ -188,6 +196,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/$': typeof SplatRoute
   '/_auth': typeof AuthRouteWithChildren
   '/_main': typeof MainRouteWithChildren
   '/_auth/login': typeof AuthLoginRoute
@@ -214,6 +223,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/$'
     | '/login'
     | '/register'
     | '/$username'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/$username/$repo/tree/$'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/$'
     | '/login'
     | '/register'
     | '/explore'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/$username/$repo/tree/$'
   id:
     | '__root__'
+    | '/$'
     | '/_auth'
     | '/_main'
     | '/_auth/login'
@@ -280,6 +292,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  SplatRoute: typeof SplatRoute
   AuthRoute: typeof AuthRouteWithChildren
   MainRoute: typeof MainRouteWithChildren
   ApiSplatRoute: typeof ApiSplatRoute
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_main/': {
@@ -538,6 +558,7 @@ const MainRouteChildren: MainRouteChildren = {
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  SplatRoute: SplatRoute,
   AuthRoute: AuthRouteWithChildren,
   MainRoute: MainRouteWithChildren,
   ApiSplatRoute: ApiSplatRoute,
