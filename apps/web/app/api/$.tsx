@@ -69,7 +69,11 @@ async function proxyRequest(request: Request): Promise<Response> {
     );
   }
 
-  const backendUrl = `${apiUrl}${path}${url.search}`;
+  const routesWithoutApiPrefix = ["/health"];
+  const shouldRemoveApiPrefix = routesWithoutApiPrefix.some((route) => path === `/api${route}`);
+
+  const backendPath = shouldRemoveApiPrefix ? path.replace(/^\/api/, "") : path;
+  const backendUrl = `${apiUrl}${backendPath}${url.search}`;
   console.log(`[Proxy] ${request.method} ${path} -> ${backendUrl}`);
 
   const headers = new Headers();
