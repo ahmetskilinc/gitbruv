@@ -37,6 +37,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.958.0",
+        "@databuddy/sdk": "^2.3.24",
         "@gitbruv/auth": "workspace:*",
         "@gitbruv/db": "workspace:*",
         "@hookform/resolvers": "^5.2.2",
@@ -271,6 +272,8 @@
     "@better-auth/utils": ["@better-auth/utils@0.3.0", "", {}, "sha512-W+Adw6ZA6mgvnSnhOki270rwJ42t4XzSK6YWGF//BbVXL6SwCLWfyzBc1lN2m/4RM28KubdBKQ4X5VMoLRNPQw=="],
 
     "@better-fetch/fetch": ["@better-fetch/fetch@1.1.21", "", {}, "sha512-/ImESw0sskqlVR94jB+5+Pxjf+xBwDZF/N5+y2/q4EqD7IARUTSpPfIo8uf39SYpCxyOCtbyYpUrZ3F/k0zT4A=="],
+
+    "@databuddy/sdk": ["@databuddy/sdk@2.3.24", "", { "peerDependencies": { "@ai-sdk/provider": "^2.0.0", "ai": "^5.0.51", "msw": "^2.11.5", "react": ">=18", "tokenlens": "^2.0.0-alpha.3", "vue": ">=3" }, "optionalPeers": ["@ai-sdk/provider", "ai", "msw", "react", "tokenlens", "vue"] }, "sha512-CALVw5bof4kwaKR7FpyxSNlgpbA7RlGrKCd51N17DlEA6q6L6GA+nWpgGQ4rgierqHKzwx+tY5xgBTD0y7QXgA=="],
 
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 
