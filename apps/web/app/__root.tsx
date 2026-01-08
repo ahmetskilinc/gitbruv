@@ -1,6 +1,7 @@
 import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { Analytics } from "@vercel/analytics/react";
+import { Databuddy } from "@databuddy/sdk/react";
 import { Button } from "@/components/ui/button";
 import { GitBranch, Home } from "lucide-react";
 import appCss from "./globals.css?url";
@@ -60,6 +61,15 @@ function RootLayout() {
       <body className="min-h-screen">
         <Outlet />
         <Toaster richColors position="top-right" />
+        <Databuddy
+          clientId="f2d7ca37-ab52-4782-be5a-f88b59c8bac2"
+          trackErrors
+          trackPerformance
+          trackWebVitals
+          trackAttributes
+          trackHashChanges
+          trackOutgoingLinks
+        />
         <Analytics />
         <Scripts />
       </body>
