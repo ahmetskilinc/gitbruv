@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Plus, LogOut, User, ChevronDown, Settings, Compass } from "lucide-react";
+import { Plus, LogOut, User, ChevronDown, Settings, Compass, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
 import { useUserProfile } from "@/lib/hooks/use-users";
+import { useTheme } from "tanstack-theme-kit";
 
 export function Header() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
 
   const { data: session } = useSession();
   // @ts-ignore
@@ -19,11 +21,11 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-[#010409]">
-      <div className="container flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-sidebar">
+      <div className="px-4 flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <span className="font-bold text-xl tracking-tight hidden sm:inline">gitbruv</span>
+            <span className="h-8 w-8 bg-accent rounded-full" />
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
@@ -36,6 +38,14 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
           {session?.user ? (
             <>
               <DropdownMenu>

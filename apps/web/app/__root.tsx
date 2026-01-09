@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GitBranch, Home } from "lucide-react";
 import appCss from "./globals.css?url";
 import { getApiUrl } from "@/lib/utils";
+import { ThemeProvider } from "tanstack-theme-kit";
 
 async function handleGitRequest(request: Request): Promise<Response | undefined> {
   const url = new URL(request.url);
@@ -132,22 +133,24 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body className="min-h-screen">
-        <Outlet />
-        <Toaster richColors position="top-right" />
-        <Databuddy
-          clientId="f2d7ca37-ab52-4782-be5a-f88b59c8bac2"
-          trackErrors
-          trackPerformance
-          trackWebVitals
-          trackAttributes
-          trackHashChanges
-          trackOutgoingLinks
-        />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+          <Databuddy
+            clientId="f2d7ca37-ab52-4782-be5a-f88b59c8bac2"
+            trackErrors
+            trackPerformance
+            trackWebVitals
+            trackAttributes
+            trackHashChanges
+            trackOutgoingLinks
+          />
+        </ThemeProvider>
         <Scripts />
       </body>
     </html>
