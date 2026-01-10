@@ -87,7 +87,14 @@ function isBlockedEmailDomain(email: string): boolean {
 }
 
 const getTrustedOrigins = (): string[] => {
-  const origins: string[] = ["http://localhost:3000"];
+  const origins: string[] = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:8081",
+    "http://10.0.2.2:3001",
+    "exp://localhost:8081",
+    "exp://192.168.*.*:8081",
+  ];
 
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
     origins.push(normalizeUrl(process.env.RAILWAY_PUBLIC_DOMAIN));
@@ -95,6 +102,10 @@ const getTrustedOrigins = (): string[] => {
 
   if (process.env.API_URL) {
     origins.push(normalizeUrl(process.env.API_URL));
+  }
+
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    origins.push(normalizeUrl(process.env.EXPO_PUBLIC_API_URL));
   }
 
   return origins;
