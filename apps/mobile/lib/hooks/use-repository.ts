@@ -83,3 +83,12 @@ export function useToggleStar(repoId: string) {
     },
   });
 }
+
+export function useRepositoryReadme(owner: string, name: string, oid: string | null) {
+  return useQuery({
+    queryKey: ["repository", owner, name, "readme", oid],
+    queryFn: () => api.repositories.getReadme(owner, name, oid!),
+    enabled: !!owner && !!name && !!oid,
+    staleTime: 1000 * 60 * 10,
+  });
+}

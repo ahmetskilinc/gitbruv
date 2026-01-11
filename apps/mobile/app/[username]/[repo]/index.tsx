@@ -1,11 +1,12 @@
 import { View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator, StyleSheet } from "react-native";
-import { useLocalSearchParams, Link, Stack } from "expo-router";
+import { useLocalSearchParams, Link, Stack, RelativePathString } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { type FileEntry } from "@/lib/api";
-import { useRepositoryPageData, useToggleStar } from "@/lib/hooks/use-repository";
+import { useRepositoryPageData, useToggleStar, useRepositoryReadme } from "@/lib/hooks/use-repository";
 import { useQueryClient } from "@tanstack/react-query";
+import { MonoText } from "@/components/StyledText";
 
 export default function RepositoryScreen() {
   const { username, repo } = useLocalSearchParams<{ username: string; repo: string }>();
@@ -13,6 +14,7 @@ export default function RepositoryScreen() {
 
   const { data, isLoading, error, refetch, isRefetching } = useRepositoryPageData(username || "", repo || "");
   const toggleStar = useToggleStar(data?.repo.id || "");
+  const { data: readmeData, isLoading: readmeLoading } = useRepositoryReadme(username || "", repo || "", data?.readmeOid || null);
 
   const handleRefresh = () => refetch();
 
@@ -46,6 +48,14 @@ export default function RepositoryScreen() {
       default:
         return "file-o";
     }
+  };
+
+  const getFileLink = (file: FileEntry) => {
+    const branch = data?.repo.defaultBranch || "main";
+    if (file.type === "tree") {
+      return `/${username}/${repo}/tree/${branch}/${file.path}`;
+    }
+    return `/${username}/${repo}/blob/${branch}/${file.path}`;
   };
 
   if (isLoading) {
@@ -97,8 +107,8 @@ export default function RepositoryScreen() {
                   <Text className="text-blue-400 text-[15px] font-medium">{username}</Text>
                 </Pressable>
               </Link>
-              <Text className="text-gray-400 text-sm mx-1">/</Text>
-              <Text className="text-white text-sm font-medium">{data.repo.name}</Text>
+              <Text className="text-gray-400 text-[15px] font-medium mx-1">/</Text>
+              <Text className="text-white text-[15px] font-medium">{data.repo.name}</Text>
             </View>
 
             <View className="flex-row mt-2">
@@ -157,10 +167,13 @@ export default function RepositoryScreen() {
             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
             <View className="relative z-10">
               {sortedFiles.map((file, index) => (
-                <Pressable key={file.oid} className={`flex-row items-center py-3 px-4 ${index < sortedFiles.length - 1 ? "border-b border-white/6" : ""}`}>
-                  <FontAwesome name={getFileIcon(file)} size={16} color={file.type === "tree" ? "#60a5fa" : "#a78bfa"} />
-                  <Text className="text-white text-sm ml-3 flex-1">{file.name}</Text>
-                </Pressable>
+                <Link key={file.oid} href={getFileLink(file) as RelativePathString} asChild>
+                  <Pressable className={`flex-row items-center py-3 px-4 ${index < sortedFiles.length - 1 ? "border-b border-white/6" : ""}`}>
+                    <FontAwesome name={getFileIcon(file)} size={16} color={file.type === "tree" ? "#60a5fa" : "#a78bfa"} />
+                    <Text className="text-white text-sm ml-3 flex-1">{file.name}</Text>
+                    <FontAwesome name="chevron-right" size={12} color="rgba(255,255,255,0.3)" />
+                  </Pressable>
+                </Link>
               ))}
             </View>
           </View>
@@ -172,11 +185,23 @@ export default function RepositoryScreen() {
             <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10">
               <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
               <View className="p-4 relative z-10">
-                <View className="flex-row items-center">
+                <View className="flex-row items-center mb-3">
                   <FontAwesome name="book" size={14} color="#60a5fa" />
                   <Text className="text-white text-sm font-semibold ml-2">README.md</Text>
                 </View>
-                <Text className="text-white/40 text-xs mt-2">Tap to view README content</Text>
+                {readmeLoading ? (
+                  <View className="py-4 items-center">
+                    <ActivityIndicator size="small" color="#60a5fa" />
+                  </View>
+                ) : readmeData?.content ? (
+                  <ScrollView showsVerticalScrollIndicator={true} className="max-h-[400px]" nestedScrollEnabled={true}>
+                    <MonoText className="text-white/90 text-xs leading-5" style={{ fontFamily: "SpaceMono" }}>
+                      {readmeData.content}
+                    </MonoText>
+                  </ScrollView>
+                ) : (
+                  <Text className="text-white/40 text-xs">Failed to load README content</Text>
+                )}
               </View>
             </View>
           </>
