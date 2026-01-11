@@ -6,6 +6,7 @@ import { BlurView } from "expo-blur";
 import { type FileEntry } from "@/lib/api";
 import { useRepositoryPageData, useToggleStar } from "@/lib/hooks/use-repository";
 import { useQueryClient } from "@tanstack/react-query";
+import { Icon } from "expo-router/unstable-native-tabs";
 
 export default function RepositoryScreen() {
   const { username, repo } = useLocalSearchParams<{ username: string; repo: string }>();
@@ -81,7 +82,14 @@ export default function RepositoryScreen() {
 
   return (
     <View style={styles.flex1}>
-      <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: data.repo.name,
+          headerTransparent: true,
+          headerLargeTitle: false,
+        }}
+      />
       <LinearGradient colors={["#0f0f23", "#1a1a3e", "#0d1b2a"]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <ScrollView
         style={styles.flex1}

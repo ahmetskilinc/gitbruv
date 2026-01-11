@@ -4,11 +4,7 @@ export default function UserLayout() {
   return (
     <Stack
       screenOptions={{
-        headerLargeTitle: true,
-        headerTransparent: true,
-        headerBackButtonDisplayMode: "minimal",
-        title: "Profile",
-        headerTitle: "Profile",
+        headerShown: true,
       }}
     >
       <Stack.Screen name="index" />

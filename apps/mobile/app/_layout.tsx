@@ -54,25 +54,19 @@ function RootLayoutNav() {
             <Stack.Screen
               name="(auth)"
               options={{
-                headerLargeTitle: true,
-                headerTransparent: true,
-                headerBackButtonDisplayMode: "minimal",
+                headerShown: false,
               }}
             />
             <Stack.Screen
               name="(tabs)"
               options={{
-                headerLargeTitle: true,
-                headerTransparent: true,
-                headerBackButtonDisplayMode: "minimal",
+                headerShown: false,
               }}
             />
             <Stack.Screen
               name="[username]"
               options={{
-                headerLargeTitle: true,
-                headerTransparent: true,
-                headerBackButtonDisplayMode: "minimal",
+                headerShown: false,
               }}
             />
           </Stack>
