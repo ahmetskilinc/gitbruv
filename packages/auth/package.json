@@ -13,6 +13,7 @@
     "./queries": "./src/queries.ts"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.4.10",
     "@gitbruv/db": "workspace:*",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.4.10",

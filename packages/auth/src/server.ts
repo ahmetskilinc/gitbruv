@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
 import { db, users, sessions, accounts, verifications, apiKeys } from "@gitbruv/db";
 import { APIError } from "better-auth/api";
+import { expo } from "@better-auth/expo";
 
 const normalizeUrl = (url: string) => {
   if (url.startsWith("http")) return url;
@@ -131,6 +132,7 @@ export const auth = betterAuth({
     apiKey({
       defaultPrefix: "gitbruv_",
     }),
+    expo(),
   ],
   user: {
     additionalFields: {

@@ -49,7 +49,9 @@ export default function UserProfileScreen() {
 
   return (
     <View style={styles.flex1}>
-      <Stack.Screen options={{ headerTitle: user.name, headerShown: false }} />
+      <Stack.Screen
+        options={{ headerTitle: user.name, headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }}
+      />
       <LinearGradient colors={["#0f0f23", "#1a1a3e", "#0d1b2a"]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <ScrollView
         style={styles.flex1}

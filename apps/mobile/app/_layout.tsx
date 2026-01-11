@@ -11,6 +11,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryProvider } from "@/lib/query-client";
 import { Text } from "react-native";
+import { useSession } from "@/lib/auth-client";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -45,30 +46,36 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { data: session } = useSession();
 
   return (
     <QueryProvider>
       <SafeAreaProvider>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
           <Stack>
-            <Stack.Screen
-              name="(auth)"
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="[username]"
-              options={{
-                headerShown: false,
-              }}
-            />
+            <Stack.Protected guard={!session}>
+              <Stack.Screen
+                name="(auth)"
+                options={{
+                  headerShown: false,
+                }}
+              />
+            </Stack.Protected>
+
+            <Stack.Protected guard={!!session}>
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="[username]"
+                options={{
+                  headerShown: false,
+                }}
+              />
+            </Stack.Protected>
           </Stack>
         </ThemeProvider>
       </SafeAreaProvider>
