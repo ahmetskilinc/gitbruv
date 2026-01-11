@@ -60,7 +60,7 @@ export default function RepositoryScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }} className="items-center justify-center">
         <Stack.Screen options={{ title: "", headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }} />
         <ActivityIndicator size="large" color="#60a5fa" />
       </View>
@@ -69,7 +69,7 @@ export default function RepositoryScreen() {
 
   if (error || !data) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
+      <View style={{ flex: 1 }} className="items-center justify-center px-6">
         <Stack.Screen options={{ title: "Error" }} />
         <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10">
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -88,13 +88,13 @@ export default function RepositoryScreen() {
   });
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{ title: data.repo.name, headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }}
       />
       <ScrollView
-        className="flex-1"
-        contentContainerClassName="flex-1 px-4 py-4"
+        style={{ flex: 1 }}
+        contentContainerClassName="px-4 py-4"
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#60a5fa" />}
       >
@@ -170,7 +170,9 @@ export default function RepositoryScreen() {
                 <Link key={file.oid} href={getFileLink(file) as RelativePathString} asChild>
                   <Pressable className={`flex-row items-center py-3 px-4 ${index < sortedFiles.length - 1 ? "border-b border-white/6" : ""}`}>
                     <FontAwesome name={getFileIcon(file)} size={16} color={file.type === "tree" ? "#60a5fa" : "#a78bfa"} />
-                    <Text className="text-white text-sm ml-3 flex-1">{file.name}</Text>
+                    <Text style={{ flex: 1 }} className="text-white text-sm ml-3">
+                      {file.name}
+                    </Text>
                     <FontAwesome name="chevron-right" size={12} color="rgba(255,255,255,0.3)" />
                   </Pressable>
                 </Link>

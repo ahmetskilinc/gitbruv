@@ -6,7 +6,8 @@
     "dev": "expo start -c",
     "start": "expo start -c",
     "android": "expo start -c --android",
-    "ios": "expo start -c --ios"
+    "ios": "expo start -c --ios",
+    "build": "eas build -p ios --profile production"
   },
   "dependencies": {
     "@better-auth/expo": "^1.4.10",

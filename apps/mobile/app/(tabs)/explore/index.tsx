@@ -80,16 +80,15 @@ export default function ExploreScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }} className="items-center justify-center">
         <ActivityIndicator size="large" color="#60a5fa" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <ScrollView
-        className="flex-1"
         contentContainerClassName="px-4 py-4"
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#60a5fa" />}
@@ -154,7 +153,7 @@ export default function ExploreScreen() {
                       <View className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center mr-3">
                         <FontAwesome name="code-fork" size={18} color="#60a5fa" />
                       </View>
-                      <View className="flex-1 mr-3">
+                      <View style={{ flex: 1 }} className="mr-3">
                         <Text className="text-white text-[15px] font-semibold">
                           {repo.owner.username}/{repo.name}
                         </Text>
@@ -182,7 +181,7 @@ export default function ExploreScreen() {
                       <View className="w-12 h-12 rounded-full bg-purple-500/20 items-center justify-center mr-3">
                         <FontAwesome name="user" size={22} color="#a78bfa" />
                       </View>
-                      <View className="flex-1 mr-3">
+                      <View style={{ flex: 1 }} className="mr-3">
                         <Text className="text-white text-[15px] font-semibold">{user.name}</Text>
                         <Text className="text-white/50 text-[13px] mt-0.5">@{user.username}</Text>
                         {user.bio && (

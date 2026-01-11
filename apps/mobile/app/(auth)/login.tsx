@@ -34,10 +34,10 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1">
-      <SafeAreaView className="flex-1">
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-          <ScrollView contentContainerClassName="flex-1 justify-center px-6" keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <ScrollView contentContainerClassName="justify-center px-6" keyboardShouldPersistTaps="handled">
             <View className="items-center mb-8">
               <View className="w-[72px] h-[72px] rounded-2xl bg-blue-600 items-center justify-center mb-5">
                 <FontAwesome name="code-fork" size={36} color="white" />
@@ -55,7 +55,8 @@ export default function LoginScreen() {
                       <FontAwesome name="envelope" size={16} color="rgba(255,255,255,0.4)" />
                     </View>
                     <TextInput
-                      className="flex-1 py-3.5 px-3 text-base text-white"
+                      style={{ flex: 1 }}
+                      className="py-3.5 px-3 text-base text-white"
                       placeholder="you@example.com"
                       placeholderTextColor="rgba(255, 255, 255, 0.3)"
                       value={email}
@@ -74,7 +75,8 @@ export default function LoginScreen() {
                       <FontAwesome name="lock" size={18} color="rgba(255,255,255,0.4)" />
                     </View>
                     <TextInput
-                      className="flex-1 py-3.5 px-3 text-base text-white"
+                      style={{ flex: 1 }}
+                      className="py-3.5 px-3 text-base text-white"
                       placeholder="••••••••"
                       placeholderTextColor="rgba(255, 255, 255, 0.3)"
                       value={password}

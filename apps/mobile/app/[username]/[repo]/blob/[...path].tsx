@@ -21,7 +21,7 @@ export default function BlobScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }} className="items-center justify-center">
         <Stack.Screen
           options={{
             title: filePath.split("/").pop() || repo || "",
@@ -38,7 +38,7 @@ export default function BlobScreen() {
 
   if (error || !data) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
+      <View style={{ flex: 1 }} className="items-center justify-center px-6">
         <Stack.Screen options={{ title: "Error" }} />
         <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10">
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -57,12 +57,12 @@ export default function BlobScreen() {
   const language = getLanguage(fileName);
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{ title: displayTitle, headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }}
       />
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerClassName="px-4 pt-4 pb-20"
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#60a5fa" />}

@@ -23,7 +23,7 @@ export default function UserProfileScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }} className="items-center justify-center">
         <Stack.Screen options={{ title: "", headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }} />
         <ActivityIndicator size="large" color="#60a5fa" />
       </View>
@@ -32,7 +32,7 @@ export default function UserProfileScreen() {
 
   if (userError || !user) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
+      <View style={{ flex: 1 }} className="items-center justify-center px-6">
         <Stack.Screen options={{ title: "Error" }} />
         <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10">
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -46,13 +46,13 @@ export default function UserProfileScreen() {
   }
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{ title: user.username, headerShown: true, headerBackButtonDisplayMode: "minimal", headerTransparent: true, headerLargeTitle: false }}
       />
       <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-4 pt-4 pb-10"
+        style={{ flex: 1 }}
+        contentContainerClassName="px-4 py-4"
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#60a5fa" />}
       >
@@ -67,18 +67,14 @@ export default function UserProfileScreen() {
                   <FontAwesome name="user" size={28} color="#60a5fa" />
                 </View>
               )}
-              <View className="flex-1">
+              <View style={{ flex: 1 }}>
                 <Text className="text-white text-[18px] font-semibold">{user.name}</Text>
                 <Text className="text-white/60 text-[14px] mt-0.5">@{user.username}</Text>
-                {user.pronouns && (
-                  <Text className="text-white/40 text-[12px] mt-0.5">{user.pronouns}</Text>
-                )}
+                {user.pronouns && <Text className="text-white/40 text-[12px] mt-0.5">{user.pronouns}</Text>}
               </View>
             </View>
 
-            {user.bio && (
-              <Text className="text-white/80 text-[14px] leading-5 mb-3">{user.bio}</Text>
-            )}
+            {user.bio && <Text className="text-white/80 text-[14px] leading-5 mb-3">{user.bio}</Text>}
 
             <View className="flex-row flex-wrap gap-3 mb-3">
               {user.location && (
@@ -96,9 +92,7 @@ export default function UserProfileScreen() {
               {user.createdAt && (
                 <View className="flex-row items-center">
                   <FontAwesome name="calendar" size={12} color="#60a5fa" />
-                  <Text className="text-white/60 text-[13px] ml-1.5">
-                    Joined {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
-                  </Text>
+                  <Text className="text-white/60 text-[13px] ml-1.5">Joined {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}</Text>
                 </View>
               )}
             </View>
@@ -115,9 +109,7 @@ export default function UserProfileScreen() {
 
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-white text-base font-semibold">Repositories</Text>
-          {repos.length > 0 && (
-            <Text className="text-white/40 text-xs">{repos.length}</Text>
-          )}
+          {repos.length > 0 && <Text className="text-white/40 text-xs">{repos.length}</Text>}
         </View>
 
         {repos.length === 0 ? (
@@ -138,11 +130,13 @@ export default function UserProfileScreen() {
                     <View className="w-10 h-10 rounded-full bg-blue-500/20 items-center justify-center mr-3">
                       <FontAwesome name="code-fork" size={16} color="#60a5fa" />
                     </View>
-                    <View className="flex-1 mr-3">
+                    <View style={{ flex: 1 }} className="mr-3">
                       <View className="flex-row items-center mb-1">
                         <Text className="text-white text-[15px] font-semibold mr-2">{repo.name}</Text>
                         <View className={`px-1.5 py-0.5 rounded-md ${repo.visibility === "private" ? "bg-yellow-500/20" : "bg-green-500/20"}`}>
-                          <Text className={`text-[10px] font-semibold ${repo.visibility === "private" ? "text-yellow-400" : "text-green-500"}`}>{repo.visibility}</Text>
+                          <Text className={`text-[10px] font-semibold ${repo.visibility === "private" ? "text-yellow-400" : "text-green-500"}`}>
+                            {repo.visibility}
+                          </Text>
                         </View>
                       </View>
                       {repo.description && (
@@ -165,4 +159,3 @@ export default function UserProfileScreen() {
     </View>
   );
 }
-

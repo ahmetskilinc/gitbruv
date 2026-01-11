@@ -32,7 +32,7 @@ export default function ProfileScreen() {
 
   if (isPending) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }} className="items-center justify-center">
         <ActivityIndicator size="large" color="#60a5fa" />
       </View>
     );
@@ -40,8 +40,8 @@ export default function ProfileScreen() {
 
   if (!session?.user) {
     return (
-      <View className="flex-1">
-        <View className="flex-1 items-center justify-center px-6">
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }} className="items-center justify-center px-6">
           <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10 w-full max-w-[320px]">
             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
             <View className="p-8 items-center relative z-10">
@@ -66,9 +66,9 @@ export default function ProfileScreen() {
   const user = session.user as { name?: string; email?: string; username?: string };
 
   return (
-    <View className="flex-1">
+    <View style={{ flex: 1 }}>
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         contentContainerClassName="px-4 py-4"
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#60a5fa" />}
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
               <View className="w-14 h-14 rounded-full bg-blue-500/20 items-center justify-center mr-3">
                 <FontAwesome name="user" size={24} color="#60a5fa" />
               </View>
-              <View className="flex-1">
+              <View style={{ flex: 1 }}>
                 <Text className="text-white text-[17px] font-semibold">{user.name}</Text>
                 <Text className="text-white/60 text-[14px] mt-0.5">@{user.username}</Text>
                 <Text className="text-white/40 text-[12px] mt-1">{user.email}</Text>
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
                 <View className="rounded-2xl overflow-hidden bg-[rgba(30,30,50,0.5)] border border-white/10">
                   <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
                   <View className="flex-row items-center p-3.5 relative z-10">
-                    <View className="flex-1 mr-3">
+                    <View style={{ flex: 1 }} className="mr-3">
                       <View className="flex-row items-center mb-1">
                         <Text className="text-white text-[15px] font-semibold mr-2">{repo.name}</Text>
                         <View className={`px-1.5 py-0.5 rounded-md ${repo.visibility === "private" ? "bg-yellow-500/20" : "bg-green-500/20"}`}>
