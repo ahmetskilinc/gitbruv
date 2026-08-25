@@ -18,6 +18,7 @@ import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/a
 import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
 import { createGitStore, getCommits, compareBranches, performMerge, repoCache, resolveRefOid } from "../git";
 import { notifyResource, resolveMentions } from "./notifications";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -437,6 +438,15 @@ app.post("/api/repositories/:owner/:name/pulls", requireAuth, async (c) => {
     })
     .returning();
 
+  recordActivity({
+    actorId: user.id,
+    repositoryId: inserted.baseRepoId,
+    type: "pr_opened",
+    payload: { number: inserted.number, title: inserted.title },
+    targetType: "pull_request",
+    targetId: inserted.id,
+  });
+
   if (body.labels?.length) {
     for (const labelId of body.labels) {
       await db.insert(prLabels).values({ pullRequestId: inserted.id, labelId }).onConflictDoNothing();
@@ -841,6 +851,15 @@ app.post("/api/pulls/:id/merge", requireAuth, async (c) => {
 
   await repoCache.invalidateBranch(baseRepo.ownerId, baseRepo.name, pr.baseBranch);
 
+  recordActivity({
+    actorId: user.id,
+    repositoryId: pr.baseRepoId,
+    type: "pr_merged",
+    payload: { number: pr.number, title: pr.title },
+    targetType: "pull_request",
+    targetId: pr.id,
+  });
+
   // Notify the PR author that their pull request was merged.
   const mergeCtx = await getRepoContext(pr.baseRepoId);
   if (mergeCtx) {
@@ -964,6 +983,15 @@ app.post("/api/pulls/:id/reviews", requireAuth, async (c) => {
       commitOid: pr.headOid,
     })
     .returning();
+
+  recordActivity({
+    actorId: user.id,
+    repositoryId: pr.baseRepoId,
+    type: "pr_review",
+    payload: { number: pr.number, title: pr.title, state: body.state },
+    targetType: "pull_request",
+    targetId: pr.id,
+  });
 
   // Notify the PR author about the review.
   const reviewCtx = await getRepoContext(pr.baseRepoId);

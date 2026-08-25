@@ -15,6 +15,7 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
+  EmptyTitle,
 } from "@/components/ui/empty"
 import {
   Dialog,
@@ -107,7 +108,7 @@ export function SecurityTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-4">
+          <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-4">
             <p className="text-sm font-medium">What are passkeys?</p>
             <p className="text-sm text-muted-foreground">
               Passkeys are a secure alternative to passwords. They use cryptographic keys stored
@@ -160,7 +161,7 @@ export function SecurityTab() {
           </div>
 
           {passkeys && passkeys.length > 0 ? (
-            <div className="divide-y overflow-hidden rounded-lg border">
+            <div className="divide-y overflow-hidden rounded-xl border">
               {passkeys.map((passkey: Passkey) => (
                 <div key={passkey.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
@@ -217,12 +218,13 @@ export function SecurityTab() {
               ))}
             </div>
           ) : (
-            <Empty className="border border-dashed py-8">
+            <Empty className="border-none py-8">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <RiFingerprintLine />
                 </EmptyMedia>
-                <EmptyDescription>No passkeys yet. Add one to get started.</EmptyDescription>
+                <EmptyTitle>No passkeys yet</EmptyTitle>
+                <EmptyDescription>Add one to get started.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}

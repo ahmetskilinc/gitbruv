@@ -217,9 +217,9 @@ export function IssueDetailView() {
         )}
 
         {issue.locked && (
-          <div className="rounded-lg border border-border bg-muted/30 py-6 text-center">
-            <RiLockLine className="mx-auto mb-2 size-8 text-muted-foreground" />
-            <p className="text-muted-foreground">This conversation has been locked.</p>
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <RiLockLine className="mx-auto mb-2 size-6" />
+            This conversation has been locked.
           </div>
         )}
       </div>
@@ -236,15 +236,15 @@ function IssueDetailSkeleton() {
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
-          <div className="flex flex-col gap-4 rounded-lg border border-border p-6">
+          <div className="flex flex-col gap-4 rounded-xl border border-border p-6">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-4 w-4/5" />
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
         </div>
       </div>
     </div>
@@ -255,7 +255,7 @@ function CommentsSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <div key={i} className="flex flex-col gap-3 rounded-xl border border-border p-4">
           <div className="flex items-center gap-2">
             <Skeleton className="size-5 rounded-full" />
             <Skeleton className="h-4 w-24" />

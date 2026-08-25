@@ -11,6 +11,7 @@ import {
 import { eq, sql, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
 import { notifyResource, resolveMentions } from "./notifications";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -296,6 +297,15 @@ app.post("/api/repositories/:owner/:name/discussions", requireAuth, async (c) =>
       number: (maxNumber?.max || 0) + 1,
     })
     .returning();
+
+  recordActivity({
+    actorId: user.id,
+    repositoryId: repoAccess.repoId,
+    type: "discussion_created",
+    payload: { number: inserted.number, title: inserted.title },
+    targetType: "discussion",
+    targetId: inserted.id,
+  });
 
   const enriched = await enrichDiscussion(inserted, user.id);
   return c.json(enriched);

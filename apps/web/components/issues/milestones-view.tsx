@@ -19,6 +19,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -132,7 +133,7 @@ export function MilestonesView() {
           <Spinner className="size-5" />
         </div>
       ) : milestones.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiFlagLine />
@@ -142,9 +143,17 @@ export function MilestonesView() {
               Milestones group issues and pull requests to track progress toward a goal.
             </EmptyDescription>
           </EmptyHeader>
+          {isOwner && !isCreating && state === "open" && (
+            <EmptyContent>
+              <Button onClick={() => setIsCreating(true)}>
+                <RiAddLine data-icon="inline-start" className="size-4" />
+                New milestone
+              </Button>
+            </EmptyContent>
+          )}
         </Empty>
       ) : (
-        <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
           {milestones.map((m: Milestone) => {
             const total = m.openIssues + m.closedIssues
             const pct = total > 0 ? Math.round((m.closedIssues / total) * 100) : 0

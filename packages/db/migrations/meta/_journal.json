@@ -8,6 +8,20 @@
       "when": 1787425369463,
       "tag": "0000_loose_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787665310638,
+      "tag": "0001_whole_scorpion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787666092265,
+      "tag": "0002_easy_famine",
+      "breakpoints": true
     }
   ]
 }

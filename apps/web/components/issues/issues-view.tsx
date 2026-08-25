@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -102,7 +103,7 @@ export function IssuesView() {
         {isLoading && !issues.length ? (
           <IssueListSkeleton />
         ) : issues.length === 0 ? (
-          <Empty className="border border-dashed py-12">
+          <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <RiRecordCircleLine />
@@ -114,9 +115,17 @@ export function IssuesView() {
                   : "Issues track bugs, tasks and ideas for this repository."}
               </EmptyDescription>
             </EmptyHeader>
+            {state === "open" && !labelFilter && (
+              <EmptyContent>
+                <Button render={<Link href={`/${username}/${repo}/issues/new`} />}>
+                  <RiAddLine data-icon="inline-start" className="size-4" />
+                  New issue
+                </Button>
+              </EmptyContent>
+            )}
           </Empty>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl border border-border">
             {issues.map((issue) => (
               <IssueItem key={issue.id} issue={issue} username={username} repo={repo} />
             ))}
@@ -129,7 +138,7 @@ export function IssuesView() {
 
 function IssueListSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}

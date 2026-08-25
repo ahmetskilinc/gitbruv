@@ -191,6 +191,30 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
         apiFetch<{ users: PublicUser[]; hasMore: boolean }>(
           `/api/users/public?sortBy=${sortBy}&limit=${limit}&offset=${offset}`
         ),
+
+      toggleFollow: (username: string) =>
+        apiFetch<{ following: boolean }>(`/api/users/${username}/follow`, { method: "POST" }),
+
+      getFollowInfo: (username: string) =>
+        apiFetch<{ followers: number; following: number; isFollowing: boolean }>(
+          `/api/users/${username}/follow-info`
+        ),
+
+      getFollowers: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/followers${query ? `?${query}` : ""}`);
+      },
+
+      getFollowing: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/following${query ? `?${query}` : ""}`);
+      },
     },
 
     settings: {
@@ -554,6 +578,27 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
         apiFetch<{ success: boolean }>(`/api/notifications/${id}`, {
           method: "DELETE",
         }),
+    },
+
+    activity: {
+      getUserActivity: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/activity${query ? `?${query}` : ""}`);
+      },
+
+      getFeed: (options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/activity/feed${query ? `?${query}` : ""}`);
+      },
+
+      getContributions: (username: string, days?: number) =>
+        apiFetch<any>(`/api/users/${username}/contributions${days ? `?days=${days}` : ""}`),
     },
 
     discussions: {

@@ -66,7 +66,7 @@ export function PRCommentItem({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2">
         <div className="flex items-center gap-2">
           <Avatar className="size-5">

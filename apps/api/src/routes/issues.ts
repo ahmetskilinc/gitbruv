@@ -15,6 +15,7 @@ import { eq, sql, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
 import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
 import { notifyResource, resolveMentions } from "./notifications";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -271,6 +272,15 @@ app.post("/api/repositories/:owner/:name/issues", requireAuth, async (c) => {
     })
     .returning();
 
+  recordActivity({
+    actorId: user.id,
+    repositoryId: repoAccess.repoId,
+    type: "issue_opened",
+    payload: { number: inserted.number, title: inserted.title },
+    targetType: "issue",
+    targetId: inserted.id,
+  });
+
   if (body.labels?.length) {
     for (const labelId of body.labels) {
       await db.insert(issueLabels).values({ issueId: inserted.id, labelId }).onConflictDoNothing();
@@ -449,6 +459,17 @@ app.patch("/api/issues/:id", requireAuth, async (c) => {
   }
 
   await db.update(issues).set(updates).where(eq(issues.id, id));
+
+  if (updates.state === "closed" && issue.state === "open") {
+    recordActivity({
+      actorId: user.id,
+      repositoryId: issue.repositoryId,
+      type: "issue_closed",
+      payload: { number: issue.number, title: issue.title },
+      targetType: "issue",
+      targetId: issue.id,
+    });
+  }
 
   // Notify the issue author when someone else closes their issue.
   if (updates.state === "closed" && issue.state === "open" && issue.authorId !== user.id) {

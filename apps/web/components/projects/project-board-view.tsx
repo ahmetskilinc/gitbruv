@@ -62,7 +62,7 @@ function SortableCard({ item, onDelete }: { item: ProjectItem; onDelete: () => v
       {...attributes}
       {...listeners}
       className={cn(
-        "cursor-grab rounded-lg border border-border bg-card p-3 active:cursor-grabbing",
+        "cursor-grab rounded-xl border border-border bg-card p-3 active:cursor-grabbing",
         isDragging && "opacity-50",
       )}
     >
@@ -130,10 +130,10 @@ function Column({
   }
 
   return (
-    <div className="w-72 shrink-0 rounded-lg bg-muted/30 p-3">
+    <div className="w-72 shrink-0 rounded-xl bg-muted/30 p-3">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-medium">{column.name}</h3>
-        <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+        <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
           {column.items.length}
         </span>
       </div>
@@ -331,7 +331,7 @@ export function ProjectBoardView() {
 
         <DragOverlay>
           {activeItem && (
-            <div className="scale-[1.02] rounded-lg border border-border bg-card p-3 shadow-lg ring-1 ring-border">
+            <div className="scale-[1.02] rounded-xl border border-border bg-card p-3 shadow-lg ring-1 ring-border">
               <p className="text-sm font-medium">
                 {activeItem.issue?.title ||
                   activeItem.pullRequest?.title ||

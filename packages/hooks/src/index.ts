@@ -7,6 +7,8 @@ export * from "./issues";
 export * from "./pull-requests";
 export * from "./search";
 export * from "./notifications";
+export * from "./activity";
+export * from "./follows";
 export * from "./discussions";
 export * from "./projects";
 export * from "./milestones";

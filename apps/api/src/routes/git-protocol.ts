@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { db, users, repositories, branchProtectionRules } from "@gitbruv/db";
 import { eq, and } from "drizzle-orm";
 import { authMiddleware, type AuthUser, type AuthVariables } from "../middleware/auth";
-import { createGitStore, getRefsAdvertisement, repoCache, isAncestor } from "../git";
+import { createGitStore, getRefsAdvertisement, repoCache, isAncestor, countNewCommits } from "../git";
+import { recordActivity, recordPush } from "./activity";
 import { getAuth } from "../auth";
 import { putObject, deleteObject, getObject } from "../s3";
 import { createHash } from "crypto";
@@ -850,6 +851,38 @@ app.post("/:owner/:name/git-receive-pack", async (c) => {
         ? update.ref.replace("refs/heads/", "")
         : update.ref;
       await repoCache.invalidateBranch(result.userId, repo.name, branch);
+
+      // Activity: branch pushes only (tags are covered by releases, deletes skipped).
+      if (!update.ref.startsWith("refs/heads/") || update.newOid === zeroOid) continue;
+
+      if (update.oldOid === zeroOid) {
+        recordActivity({
+          actorId: currentUser.id,
+          repositoryId: repo.id,
+          type: "branch_created",
+          payload: { branch, newOid: update.newOid },
+        });
+        continue;
+      }
+
+      let commitCount = 1;
+      let commitCountCapped = true;
+      try {
+        const walked = await countNewCommits(store.fs, store.dir, update.oldOid, update.newOid);
+        commitCount = Math.max(walked.count, 1);
+        commitCountCapped = walked.capped;
+      } catch {
+        // Fall back to a conservative "1+" if the walk fails.
+      }
+      recordPush({
+        actorId: currentUser.id,
+        repositoryId: repo.id,
+        branch,
+        oldOid: update.oldOid,
+        newOid: update.newOid,
+        commitCount,
+        commitCountCapped,
+      });
     }
 
     console.log(`[API] receive-pack: building response for ${allowedUpdates.length} allowed, ${rejectedRefLines.length} rejected`);

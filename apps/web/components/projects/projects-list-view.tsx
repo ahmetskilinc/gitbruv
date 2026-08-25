@@ -110,7 +110,7 @@ export function ProjectsListView() {
           <Spinner className="size-8 text-muted-foreground" />
         </div>
       ) : projects.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiKanbanView2 />
@@ -137,7 +137,7 @@ export function ProjectsListView() {
                 className="block p-4"
               >
                 <div className="flex items-start gap-3">
-                  <div className="rounded bg-muted p-2">
+                  <div className="rounded-lg bg-muted p-2">
                     <RiKanbanView2 className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">

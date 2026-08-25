@@ -87,7 +87,7 @@ export function NotificationsView() {
       </Tabs>
 
       {isLoading ? (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-start gap-3 border-b p-3 last:border-b-0">
               <Skeleton className="size-8 shrink-0 rounded-full" />
@@ -99,7 +99,7 @@ export function NotificationsView() {
           ))}
         </div>
       ) : notifications.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiNotification3Line />
@@ -115,7 +115,7 @@ export function NotificationsView() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="divide-y overflow-hidden rounded-lg border">
+        <div className="divide-y overflow-hidden rounded-xl border">
           {notifications.map((notification) => (
             <div key={notification.id} className="group/row relative flex items-center">
               <div className="min-w-0 flex-1">

@@ -129,7 +129,7 @@ export function InlineCommentThread({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card/50">
+    <div className="overflow-hidden rounded-xl border border-border bg-card/50">
       {rootComments.map((comment) => (
         <div key={comment.id}>
           <CommentItem

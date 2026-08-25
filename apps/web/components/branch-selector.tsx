@@ -82,7 +82,7 @@ export function BranchSelector({
 
   if (branches.length === 0) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border bg-secondary/50 px-3 py-1.5 text-sm">
+      <div className="flex items-center gap-2 rounded-xl border bg-secondary/50 px-3 py-1.5 text-sm">
         <RiGitBranchLine className="size-4 text-primary" />
         <span className="font-mono">{currentBranch}</span>
       </div>

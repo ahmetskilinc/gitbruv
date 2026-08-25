@@ -4,6 +4,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
 import { createGitStore, resolveRefOid } from "../git";
 import { putObject, getRepoPrefix, deleteObject } from "../s3";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -147,6 +148,17 @@ app.post("/api/repositories/:owner/:name/releases", requireAuth, async (c) => {
     })
     .returning();
 
+  if (!isDraft) {
+    recordActivity({
+      actorId: user.id,
+      repositoryId: repo.id,
+      type: "release_published",
+      payload: { tagName: inserted.tagName, title: inserted.name ?? inserted.tagName },
+      targetType: "release",
+      targetId: inserted.id,
+    });
+  }
+
   return c.json(await enrichRelease(inserted));
 });
 
@@ -185,6 +197,14 @@ app.patch("/api/releases/:id", requireAuth, async (c) => {
         const refKey = `${getRepoPrefix(repo.ownerId, repo.name)}/refs/tags/${release.tagName}`;
         await putObject(refKey, Buffer.from(release.commitOid + "\n"));
       }
+      recordActivity({
+        actorId: user.id,
+        repositoryId: release.repositoryId,
+        type: "release_published",
+        payload: { tagName: release.tagName, title: release.name ?? release.tagName },
+        targetType: "release",
+        targetId: release.id,
+      });
     }
   }
 

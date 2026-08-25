@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -94,7 +95,7 @@ export function PullsView() {
         {isLoading && !pullRequests.length ? (
           <PRListSkeleton />
         ) : pullRequests.length === 0 ? (
-          <Empty className="border border-dashed py-12">
+          <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <RiGitPullRequestLine />
@@ -106,9 +107,17 @@ export function PullsView() {
                   : "Pull requests propose and review changes before merging."}
               </EmptyDescription>
             </EmptyHeader>
+            {state === "open" && !labelFilter && (
+              <EmptyContent>
+                <Button render={<Link href={`/${username}/${repo}/pulls/new`} />}>
+                  <RiAddLine data-icon="inline-start" />
+                  New pull request
+                </Button>
+              </EmptyContent>
+            )}
           </Empty>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl border border-border">
             {pullRequests.map((pr) => (
               <PRItem key={pr.id} pullRequest={pr} username={username} repo={repo} />
             ))}
@@ -121,7 +130,7 @@ export function PullsView() {
 
 function PRListSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}

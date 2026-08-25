@@ -9,7 +9,7 @@ export function LastCommitBar({ lastCommit }: { lastCommit?: Commit }) {
   if (!lastCommit) return null
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5">
+    <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-2.5">
       <Avatar className="size-6 shrink-0">
         <AvatarImage src={lastCommit.author.avatarUrl || undefined} />
         <AvatarFallback className="bg-muted text-xs font-semibold text-muted-foreground">
@@ -34,7 +34,7 @@ export function LastCommitBar({ lastCommit }: { lastCommit?: Commit }) {
 
 export function LastCommitBarSkeleton() {
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5">
+    <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-2.5">
       <Skeleton className="size-6 shrink-0 rounded-full" />
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Skeleton className="h-4 w-24 shrink-0" />

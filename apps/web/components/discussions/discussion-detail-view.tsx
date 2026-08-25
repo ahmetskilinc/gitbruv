@@ -107,29 +107,29 @@ export function DiscussionDetailView() {
         Back to discussions
       </Link>
 
-      <div className="mb-6 rounded-lg border border-border">
+      <div className="mb-6 rounded-xl border border-border">
         <div className="p-6">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             {discussion.isPinned && (
-              <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-xs text-amber-500">
                 <RiPushpinLine className="size-3" />
                 Pinned
               </span>
             )}
             {discussion.isAnswered && (
-              <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
                 <RiCheckboxCircleLine className="size-3" />
                 Answered
               </span>
             )}
             {discussion.isLocked && (
-              <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-500">
+              <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 px-2 py-0.5 text-xs text-red-500">
                 <RiLockLine className="size-3" />
                 Locked
               </span>
             )}
             {discussion.category && (
-              <span className="rounded bg-muted px-2 py-0.5 text-xs">
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs">
                 {discussion.category.emoji} {discussion.category.name}
               </span>
             )}
@@ -165,7 +165,7 @@ export function DiscussionDetailView() {
           <div
             key={comment.id}
             className={cn(
-              "rounded-lg border border-border p-4",
+              "rounded-xl border border-border p-4",
               comment.isAnswer && "border-emerald-500 bg-emerald-500/5",
             )}
           >
@@ -221,7 +221,7 @@ export function DiscussionDetailView() {
       </div>
 
       {!discussion.isLocked && session?.user && (
-        <form onSubmit={handleSubmitComment} className="rounded-lg border border-border p-4">
+        <form onSubmit={handleSubmitComment} className="rounded-xl border border-border p-4">
           <Textarea
             value={commentBody}
             onChange={(e) => setCommentBody(e.target.value)}
@@ -239,7 +239,7 @@ export function DiscussionDetailView() {
       )}
 
       {discussion.isLocked && (
-        <div className="rounded-lg border border-border py-8 text-center text-sm text-muted-foreground">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           <RiLockLine className="mx-auto mb-2 size-6" />
           This discussion is locked. You cannot add new comments.
         </div>

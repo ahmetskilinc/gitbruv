@@ -84,7 +84,7 @@ export function PRForm({
     <form onSubmit={handleSubmit}>
       <FieldGroup>
         {forkedFrom && (
-          <div className="flex items-center gap-4 rounded-lg border border-primary/20 bg-primary/10 p-3 text-sm">
+          <div className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/10 p-3 text-sm">
             <label className="flex cursor-pointer items-center gap-2">
               <Checkbox
                 checked={toUpstream}
@@ -108,7 +108,7 @@ export function PRForm({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-secondary/30 p-4">
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-secondary/30 p-4">
           <div className="flex items-center gap-2">
             <RiGitBranchLine className="size-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">base:</span>

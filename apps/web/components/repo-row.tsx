@@ -56,5 +56,5 @@ export function RepoRow({
 }
 
 export function RepoRowList({ children }: { children: React.ReactNode }) {
-  return <div className="divide-y overflow-hidden rounded-lg border">{children}</div>
+  return <div className="divide-y overflow-hidden rounded-xl border">{children}</div>
 }

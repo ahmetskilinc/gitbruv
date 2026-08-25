@@ -56,7 +56,7 @@ export function ReactionPicker({
           onClick={() => onToggle(reaction.emoji)}
           disabled={disabled}
           className={cn(
-            "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs transition-colors duration-100 motion-reduce:transition-none",
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors duration-100 motion-reduce:transition-none",
             reaction.reacted
               ? "border-primary/30 bg-primary/10 text-primary"
               : "border-border bg-secondary/50 hover:bg-secondary",

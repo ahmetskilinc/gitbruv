@@ -1443,6 +1443,27 @@ export async function performMerge(
   }
 }
 
+/**
+ * Count commits reachable from newOid but not from oldOid, capped. Used for
+ * "pushed N commits" activity — capped:true means "N+" (or a force-push whose
+ * old tip is no longer an ancestor).
+ */
+export async function countNewCommits(
+  fs: S3Fs,
+  dir: string,
+  oldOid: string,
+  newOid: string,
+  cap = 20
+): Promise<{ count: number; capped: boolean }> {
+  const commits = await git.log({ fs, dir, ref: newOid, depth: cap + 1 });
+  let count = 0;
+  for (const entry of commits) {
+    if (entry.oid === oldOid) return { count, capped: false };
+    count++;
+  }
+  return { count: Math.min(count, cap), capped: true };
+}
+
 export async function isAncestor(
   fs: S3Fs,
   dir: string,

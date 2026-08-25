@@ -166,7 +166,7 @@ export function CodeBlock({ children, language }: { children: string; language: 
   }, [children])
 
   return (
-    <div className="group/cb not-prose relative my-4 overflow-hidden rounded-lg border">
+    <div className="group/cb not-prose relative my-4 overflow-hidden rounded-xl border">
       <div className="flex items-center justify-between border-b bg-secondary/50 px-4 py-2">
         <span className="font-mono text-xs text-muted-foreground">
           {language || "text"}

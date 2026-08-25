@@ -172,7 +172,7 @@ export function ConsentView() {
   if (clientError || !client) {
     return (
       <div className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-6 text-center">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-6 text-center">
           <p className="text-destructive">
             {clientError instanceof Error ? clientError.message : "Application not found"}
           </p>
@@ -183,7 +183,7 @@ export function ConsentView() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <div className="rounded-lg border bg-card p-8">
+      <div className="rounded-xl border bg-card p-8">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
             {client.icon ? (
@@ -216,7 +216,7 @@ export function ConsentView() {
               return (
                 <div
                   key={scope}
-                  className="flex items-start gap-3 rounded-lg border bg-muted/50 p-3"
+                  className="flex items-start gap-3 rounded-xl border bg-muted/50 p-3"
                 >
                   <RiCheckboxCircleLine className="mt-0.5 size-5 shrink-0 text-emerald-500" />
                   <div>

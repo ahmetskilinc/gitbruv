@@ -10,7 +10,7 @@ export function AuthCard({
 }) {
   return (
     <div className="w-full rounded-xl bg-muted/50 p-0.5 shadow-xl">
-      <div className={cn("rounded-[calc(var(--radius)*1.4-2px)] border bg-card p-8", className)}>
+      <div className={cn("rounded-bezel border bg-card p-8", className)}>
         {children}
       </div>
     </div>

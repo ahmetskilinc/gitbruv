@@ -6,6 +6,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Inner radius for content nested inside a 2px (p-0.5) bezel shell at
+   rounded-xl — keeps the two radii geometrically concentric. */
+@utility rounded-bezel {
+  border-radius: calc(var(--radius) * 1.4 - 2px);
+}
+
 @theme inline {
     /* Motion: one easing for everything that enters or slides.
        Duration ladder: 100 feedback / 150 state / 200 menus / 400 sidebar / 500 arrivals.

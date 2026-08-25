@@ -127,7 +127,7 @@ export function IssueDetail({
 
   if (isEditing) {
     return (
-      <div className="rounded-lg border border-border p-6">
+      <div className="rounded-xl border border-border p-6">
         <IssueForm
           initialTitle={issue.title}
           initialBody={issue.body || ""}
@@ -143,7 +143,7 @@ export function IssueDetail({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
       <div className="flex flex-col gap-4 lg:col-span-3">
-        <div className="rounded-lg border border-border">
+        <div className="rounded-xl border border-border">
           <div className="flex items-start justify-between border-b border-border bg-muted/30 px-4 py-3">
             <div className="flex items-center gap-2">
               <Avatar className="size-6">

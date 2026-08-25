@@ -36,7 +36,7 @@ export function InlineCommentForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3"
     >
       {replyTo && <div className="text-xs text-muted-foreground">Replying to comment</div>}
       <Textarea

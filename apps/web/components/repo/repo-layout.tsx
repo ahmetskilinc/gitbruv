@@ -193,7 +193,7 @@ function RepoLayoutContent({ children }: { children: React.ReactNode }) {
                     >
                       <RiGitForkLine className="size-3.5" />
                       <span>Fork</span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
+                      <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
                         {forkCount}
                       </span>
                     </Button>

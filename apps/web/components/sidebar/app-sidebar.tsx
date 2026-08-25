@@ -17,8 +17,10 @@ import {
   RiMoonLine,
   RiNotification3Line,
   RiPriceTag3Line,
+  RiGitRepositoryLine,
   RiRecordCircleLine,
   RiSettings3Line,
+  RiStarLine,
   RiSunLine,
   RiUserLine,
   RiAddLine,
@@ -30,6 +32,8 @@ import {
   useIssueCount,
   usePullRequestCount,
   useRepositoryInfo,
+  useUserRepositories,
+  useUserStarredRepos,
 } from "@gitbruv/hooks"
 import { signOut, useSession } from "@/lib/auth-client"
 import { useHydrated } from "@/hooks/use-hydrated"
@@ -65,6 +69,7 @@ import { useSidebarSection } from "./sidebar-section-context"
 export function AppSidebar() {
   const { section, direction, repo, goToMain, goToRepo } = useSidebarSection()
   const { data: session } = useSession()
+  const username = (session?.user as { username?: string } | undefined)?.username ?? ""
   const [newRepoOpen, setNewRepoOpen] = useState(false)
 
   return (
@@ -79,17 +84,22 @@ export function AppSidebar() {
             <span className="hidden group-data-[collapsible=icon]:inline">g</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
+        {/* The sidebar never scrolls — it sits on the ground plane like the
+            header; only the content card scrolls. */}
+        <SidebarContent className="overflow-hidden overscroll-none">
           <SidebarLayers activeKey={section} direction={direction}>
             {section === "repo" && repo ? (
               <RepoNav repo={repo} onBack={goToMain} />
             ) : (
-              <MainNav
-                loggedIn={!!session?.user}
-                onNewRepo={() => setNewRepoOpen(true)}
-                currentRepo={repo}
-                onOpenRepo={goToRepo}
-              />
+              <>
+                <MainNav
+                  loggedIn={!!session?.user}
+                  onNewRepo={() => setNewRepoOpen(true)}
+                  currentRepo={repo}
+                  onOpenRepo={goToRepo}
+                />
+                {username && <RepoShortcuts username={username} />}
+              </>
             )}
           </SidebarLayers>
         </SidebarContent>
@@ -209,6 +219,84 @@ function MainNav({
         )}
       </SidebarMenu>
     </SidebarGroup>
+  )
+}
+
+const SIDEBAR_REPO_LIMIT = 5
+
+/** Compact repo shortcut lists (own + starred) for the main sidebar layer. */
+function RepoShortcuts({ username }: { username: string }) {
+  const pathname = usePathname()
+  const { data: ownData } = useUserRepositories(username)
+  const { data: starredData } = useUserStarredRepos(username)
+
+  const own = [...(ownData?.repos ?? [])]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, SIDEBAR_REPO_LIMIT)
+  const starred = (starredData?.repos ?? [])
+    .filter((repo) => repo.owner?.username !== username)
+    .slice(0, SIDEBAR_REPO_LIMIT)
+
+  if (own.length === 0 && starred.length === 0) return null
+
+  return (
+    <>
+      {own.length > 0 && (
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel>Your repositories</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {own.map((repo) => {
+                const href = `/${username}/${repo.name}`
+                return (
+                  <SidebarMenuItem key={repo.id}>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(href)}
+                      render={
+                        <Link href={href}>
+                          <RiGitRepositoryLine />
+                          <span className="truncate">{repo.name}</span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+      {starred.length > 0 && (
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel>Starred</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {starred.map((repo) => {
+                const owner = repo.owner?.username ?? ""
+                const href = `/${owner}/${repo.name}`
+                return (
+                  <SidebarMenuItem key={repo.id}>
+                    <SidebarMenuButton
+                      isActive={pathname.startsWith(href)}
+                      tooltip={`${owner}/${repo.name}`}
+                      render={
+                        <Link href={href}>
+                          <RiStarLine />
+                          <span className="truncate">
+                            <span className="text-muted-foreground">{owner}/</span>
+                            {repo.name}
+                          </span>
+                        </Link>
+                      }
+                    />
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+    </>
   )
 }
 
@@ -403,14 +491,20 @@ function UserMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarMenuButton size="lg" tooltip={user?.name || session?.user?.name || "Account"}>
-                <Avatar className="size-6">
+              <SidebarMenuButton
+                size="lg"
+                tooltip={user?.name || session?.user?.name || "Account"}
+                className="group-data-[collapsible=icon]:justify-center"
+              >
+                <Avatar className="size-6 shrink-0">
                   <AvatarImage src={user?.avatarUrl || undefined} />
-                  <AvatarFallback>
+                  <AvatarFallback className="text-xs">
                     {(user?.name || session?.user?.name || "U").charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="truncate">{user?.name || session?.user?.name}</span>
+                <span className="truncate group-data-[collapsible=icon]:hidden">
+                  {user?.name || session?.user?.name}
+                </span>
               </SidebarMenuButton>
             }
           />

@@ -23,9 +23,14 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   pr_assigned: RiGitPullRequestLine,
   mention: RiUserLine,
   discussion_reply: RiChat1Line,
+  user_follow: RiUserLine,
 }
 
 function getNotificationUrl(notification: Notification): string {
+  if (notification.type === "user_follow") {
+    return notification.actor?.username ? `/${notification.actor.username}` : "/"
+  }
+
   if (
     !notification.repoOwner ||
     !notification.repoName ||
@@ -84,7 +89,7 @@ export function NotificationItem({
             </AvatarFallback>
           </Avatar>
         ) : (
-          <div className="flex size-8 items-center justify-center rounded-md bg-muted">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
             <Icon className="size-4 text-muted-foreground" />
           </div>
         )}

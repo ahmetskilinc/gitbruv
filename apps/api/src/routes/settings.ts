@@ -103,6 +103,7 @@ app.patch("/api/settings/preferences", requireAuth, async (c) => {
     theme?: string;
     language?: string;
     showEmail?: boolean;
+    includePrivateContributions?: boolean;
   }>();
 
   const currentUser = await db.query.users.findFirst({
@@ -116,6 +117,8 @@ app.patch("/api/settings/preferences", requireAuth, async (c) => {
   if (body.theme !== undefined) newPreferences.theme = body.theme;
   if (body.language !== undefined) newPreferences.language = body.language;
   if (body.showEmail !== undefined) newPreferences.showEmail = body.showEmail;
+  if (body.includePrivateContributions !== undefined)
+    newPreferences.includePrivateContributions = body.includePrivateContributions;
 
   await db
     .update(users)

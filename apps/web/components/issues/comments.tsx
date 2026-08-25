@@ -118,7 +118,7 @@ export function CommentItem({
   }
 
   return (
-    <div className="rounded-lg border border-border">
+    <div className="rounded-xl border border-border">
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
         <div className="flex items-center gap-2">
           <Avatar className="size-5">

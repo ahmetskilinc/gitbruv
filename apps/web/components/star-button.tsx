@@ -34,7 +34,7 @@ export function StarButton({
         <RiStarLine className="size-3.5 text-muted-foreground" />
       )}
       <span>{isStarred ? "Starred" : "Star"}</span>
-      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
+      <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
         {starCount}
       </span>
     </Button>

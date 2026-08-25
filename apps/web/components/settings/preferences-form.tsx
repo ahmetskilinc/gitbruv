@@ -35,6 +35,9 @@ export function PreferencesForm({ user }: { user: UserProfile }) {
   const [theme, setTheme] = useState<"light" | "dark" | "system">(preferences.theme || "system")
   const [language, setLanguage] = useState(preferences.language || "")
   const [showEmail, setShowEmail] = useState(preferences.showEmail ?? false)
+  const [includePrivateContributions, setIncludePrivateContributions] = useState(
+    preferences.includePrivateContributions ?? false,
+  )
   const [wordWrap, setWordWrap] = useState(wordWrapData?.wordWrap ?? false)
   const [prevWordWrap, setPrevWordWrap] = useState(wordWrapData?.wordWrap)
 
@@ -57,6 +60,7 @@ export function PreferencesForm({ user }: { user: UserProfile }) {
           theme,
           language: language || undefined,
           showEmail,
+          includePrivateContributions,
         }),
         updateWordWrap({ wordWrap }),
       ])
@@ -123,6 +127,22 @@ export function PreferencesForm({ user }: { user: UserProfile }) {
             id="showEmail"
             checked={showEmail}
             onCheckedChange={(checked) => setShowEmail(checked === true)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <FieldLabel htmlFor="includePrivateContributions">
+              Include private contributions
+            </FieldLabel>
+            <p className="text-xs text-muted-foreground">
+              Show anonymized private activity counts in your profile contribution graph
+            </p>
+          </div>
+          <Checkbox
+            id="includePrivateContributions"
+            checked={includePrivateContributions}
+            onCheckedChange={(checked) => setIncludePrivateContributions(checked === true)}
           />
         </div>
 

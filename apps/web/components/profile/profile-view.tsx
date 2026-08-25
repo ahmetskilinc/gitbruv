@@ -14,16 +14,32 @@ import {
   RiLinkM,
   RiMapPinLine,
   RiPulseLine,
+  RiGroupLine,
   RiSearchLine,
   RiStarLine,
+  RiUserFollowLine,
+  RiUserUnfollowLine,
   RiTwitterXLine,
 } from "@remixicon/react"
 import {
+  useFollowInfo,
+  useToggleFollow,
+  useUserActivity,
   useUserProfile,
   useUserRepositories,
   useUserStarredRepos,
   type RepositoryWithStars,
 } from "@gitbruv/hooks"
+import { useSession } from "@/lib/auth-client"
+import { FollowList } from "@/components/profile/follow-list"
+import { Spinner } from "@/components/ui/spinner"
+import {
+  ActivityList,
+  ActivityListSkeleton,
+  ActivityRow,
+} from "@/components/activity/activity-row"
+import { ContributionGraph } from "@/components/activity/contribution-graph"
+import { Button } from "@/components/ui/button"
 import { timeAgo, formatDate } from "@gitbruv/lib"
 import { RepoRow, RepoRowList } from "@/components/repo-row"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -83,7 +99,7 @@ function RepoFilterInput({
 
 function NoMatches({ filter }: { filter: string }) {
   return (
-    <Empty className="border border-dashed py-10">
+    <Empty className="py-10">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <RiBookOpenLine />
@@ -109,7 +125,7 @@ function RepositoriesTab({ username }: { username: string }) {
 
   if (repos.length === 0) {
     return (
-      <Empty className="border border-dashed py-12">
+      <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <RiGitBranchLine />
@@ -151,7 +167,7 @@ function StarredTab({ username }: { username: string }) {
 
   if (repos.length === 0) {
     return (
-      <Empty className="border border-dashed py-12">
+      <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <RiStarLine />
@@ -181,9 +197,69 @@ function StarredTab({ username }: { username: string }) {
   )
 }
 
+const ACTIVITY_PAGE_SIZE = 20
+
+function ActivityTab({ username }: { username: string }) {
+  const [offset, setOffset] = useState(0)
+  const { data, isLoading } = useUserActivity(username, {
+    limit: ACTIVITY_PAGE_SIZE,
+    offset,
+  })
+
+  const items = data?.activities ?? []
+  const hasMore = data?.hasMore ?? false
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ContributionGraph username={username} />
+      {isLoading ? (
+        <ActivityListSkeleton />
+      ) : items.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <RiPulseLine />
+            </EmptyMedia>
+            <EmptyTitle>No activity yet</EmptyTitle>
+            <EmptyDescription>
+              Pushes, issues, pull requests, and releases will show up here.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <ActivityList>
+          {items.map((activity) => (
+            <ActivityRow key={activity.id} activity={activity} />
+          ))}
+        </ActivityList>
+      )}
+      {(offset > 0 || hasMore) && (
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - ACTIVITY_PAGE_SIZE))}
+          >
+            Newer
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasMore}
+            onClick={() => setOffset(offset + ACTIVITY_PAGE_SIZE)}
+          >
+            Older
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TabSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-hidden rounded-xl border">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="border-b px-4 py-3 last:border-b-0">
           <Skeleton className="mb-2 h-4 w-48" />
@@ -200,15 +276,30 @@ export function ProfileView() {
 
   const [tab, setTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(["repositories", "starred"]).withDefault("repositories"),
+    parseAsStringLiteral([
+      "repositories",
+      "starred",
+      "activity",
+      "followers",
+      "following",
+    ]).withDefault("repositories"),
   )
   const { data: user, isLoading, error } = useUserProfile(username)
   const { data: reposData } = useUserRepositories(username)
   const { data: starredData } = useUserStarredRepos(username)
+  const { data: session } = useSession()
+  const { data: followInfo } = useFollowInfo(username)
+  const toggleFollow = useToggleFollow(username)
+
+  const viewerUsername =
+    (session?.user as { username?: string } | undefined)?.username ?? null
+  const isOwnProfile = viewerUsername === username
+  const canFollow = !!session?.user && !isOwnProfile
 
   const repos = reposData?.repos || []
   const repoCount = repos.length
   const totalStars = repos.reduce((sum, repo) => sum + (repo.starCount || 0), 0)
+  const totalForks = repos.reduce((sum, repo) => sum + (repo.forkCount || 0), 0)
   const starredCount = starredData?.repos?.length || 0
 
   if (isLoading) {
@@ -267,6 +358,25 @@ export function ProfileView() {
             </div>
           </div>
 
+          {canFollow && (
+            <Button
+              variant={followInfo?.isFollowing ? "outline" : "default"}
+              size="sm"
+              className="mt-4 w-full"
+              disabled={toggleFollow.isPending || !followInfo}
+              onClick={() => toggleFollow.mutate()}
+            >
+              {toggleFollow.isPending ? (
+                <Spinner />
+              ) : followInfo?.isFollowing ? (
+                <RiUserUnfollowLine className="size-4" />
+              ) : (
+                <RiUserFollowLine className="size-4" />
+              )}
+              {followInfo?.isFollowing ? "Unfollow" : "Follow"}
+            </Button>
+          )}
+
           {user.bio && (
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
               {user.bio}
@@ -275,7 +385,7 @@ export function ProfileView() {
 
           <Separator className="my-4" />
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span>
               <span className="font-medium text-foreground tabular-nums">
                 {repoCount}
@@ -288,6 +398,45 @@ export function ProfileView() {
               </span>{" "}
               {totalStars === 1 ? "star" : "stars"}
             </span>
+            {totalForks > 0 && (
+              <span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {totalForks}
+                </span>{" "}
+                {totalForks === 1 ? "fork" : "forks"}
+              </span>
+            )}
+            {starredCount > 0 && (
+              <span>
+                <span className="font-medium text-foreground tabular-nums">
+                  {starredCount}
+                </span>{" "}
+                starred
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => setTab("followers")}
+              className="transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
+            >
+              <span className="font-medium text-foreground tabular-nums">
+                {followInfo?.followers ?? 0}
+              </span>{" "}
+              {(followInfo?.followers ?? 0) === 1 ? "follower" : "followers"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("following")}
+              className="transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
+            >
+              <span className="font-medium text-foreground tabular-nums">
+                {followInfo?.following ?? 0}
+              </span>{" "}
+              following
+            </button>
           </div>
 
           <div className="mt-4 flex flex-col gap-2.5">
@@ -406,6 +555,28 @@ export function ProfileView() {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-2">
+                <RiPulseLine className="size-4" />
+                <span>Activity</span>
+              </TabsTrigger>
+              <TabsTrigger value="followers" className="gap-2">
+                <RiGroupLine className="size-4" />
+                <span>Followers</span>
+                {(followInfo?.followers ?? 0) > 0 && (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    ({followInfo?.followers})
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="following" className="gap-2">
+                <RiUserFollowLine className="size-4" />
+                <span>Following</span>
+                {(followInfo?.following ?? 0) > 0 && (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    ({followInfo?.following})
+                  </span>
+                )}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="repositories" className="mt-0">
@@ -414,6 +585,18 @@ export function ProfileView() {
 
             <TabsContent value="starred" className="mt-0">
               <StarredTab username={username} />
+            </TabsContent>
+
+            <TabsContent value="activity" className="mt-0">
+              <ActivityTab username={username} />
+            </TabsContent>
+
+            <TabsContent value="followers" className="mt-0">
+              <FollowList username={username} mode="followers" />
+            </TabsContent>
+
+            <TabsContent value="following" className="mt-0">
+              <FollowList username={username} mode="following" />
             </TabsContent>
           </Tabs>
         </div>

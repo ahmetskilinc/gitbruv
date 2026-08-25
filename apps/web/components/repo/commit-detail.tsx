@@ -20,7 +20,7 @@ function DiffSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="overflow-hidden rounded-lg border">
+        <div key={i} className="overflow-hidden rounded-xl border">
           <Skeleton className="h-10 rounded-none" />
           <div className="flex flex-col gap-1 p-2">
             {[...Array(5)].map((_, j) => (
@@ -47,10 +47,10 @@ function CommitHeaderSkeleton() {
 
 function PageSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
+    <div className="w-full px-4 py-6 sm:px-6">
       <div className="mb-6">
         <Skeleton className="mb-4 h-6 w-48" />
-        <div className="rounded-lg border">
+        <div className="rounded-xl border">
           <CommitHeaderSkeleton />
         </div>
       </div>
@@ -96,7 +96,7 @@ export function CommitDetail() {
   const oid = decodeURIComponent(params.oid)
 
   const [viewMode, setViewMode] = useState<DiffViewMode>("unified")
-  const [fullWidth, setFullWidth] = useState(false)
+  const [fullWidth, setFullWidth] = useState(true)
   const [showSidebar, setShowSidebar] = useState(true)
   const { fileRefs, selectedFile, scrollToFile } = useFileNavigation()
 
@@ -131,7 +131,7 @@ export function CommitDetail() {
       )}
     >
       <div className="mb-6">
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border">
           <div className="flex items-center gap-2 border-b bg-card px-4 py-3">
             <RiGitCommitLine className="size-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Commit</span>
@@ -143,7 +143,7 @@ export function CommitDetail() {
           {diffLoading ? (
             <CommitHeaderSkeleton />
           ) : diffError || !commit ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               Failed to load commit details
             </div>
           ) : (
@@ -183,7 +183,7 @@ export function CommitDetail() {
       </div>
 
       {commit && (
-        <div className="mb-6 grid grid-cols-2 divide-x divide-y rounded-lg border sm:grid-cols-4 sm:divide-y-0">
+        <div className="mb-6 grid grid-cols-2 divide-x divide-y overflow-hidden rounded-xl border sm:grid-cols-4 sm:divide-y-0">
           <StatCell label="Committed" sub={commit.author.name}>
             {new Date(commit.timestamp).toLocaleDateString(undefined, {
               month: "short",

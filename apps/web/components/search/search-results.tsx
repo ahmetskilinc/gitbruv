@@ -42,7 +42,7 @@ export function SearchResultItem({ result }: { result: SearchResult }) {
             <AvatarFallback>{result.title.charAt(0)}</AvatarFallback>
           </Avatar>
         ) : (
-          <div className="flex size-8 items-center justify-center rounded-md bg-muted">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
             <Icon className="size-4 text-muted-foreground" />
           </div>
         )}
@@ -93,12 +93,12 @@ export function SearchResultItem({ result }: { result: SearchResult }) {
 export function SearchResultsList({ results }: { results: SearchResult[] }) {
   if (results.length === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground">No results found</div>
+      <div className="py-8 text-center text-sm text-muted-foreground">No results found</div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-hidden rounded-xl border">
       {results.map((result) => (
         <SearchResultItem key={`${result.type}-${result.id}`} result={result} />
       ))}

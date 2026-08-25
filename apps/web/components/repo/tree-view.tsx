@@ -29,7 +29,7 @@ function TreeSkeleton() {
 function PageSkeleton() {
   return (
     <PageContainer size="wide" className="pt-0">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <div className="h-10 border-b bg-muted/30" />
         <TreeSkeleton />
       </div>
@@ -74,7 +74,7 @@ export function TreeView() {
 
   return (
     <PageContainer size="wide" className="pt-0">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <PathBreadcrumb
           username={username}
           repoName={repoName}
@@ -85,7 +85,7 @@ export function TreeView() {
         {treeLoading ? (
           <TreeSkeleton />
         ) : treeError || !treeData ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             Failed to load directory
           </div>
         ) : (

@@ -53,7 +53,7 @@ export function DiscussionsListView() {
           <Spinner className="size-8 text-muted-foreground" />
         </div>
       ) : discussions.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiDiscussLine />
@@ -71,7 +71,7 @@ export function DiscussionsListView() {
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+        <div className="overflow-hidden rounded-xl border border-border divide-y divide-border">
           {discussions.map((discussion) => (
             <Link
               key={discussion.id}

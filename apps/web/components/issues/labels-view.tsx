@@ -190,7 +190,7 @@ export function LabelsView() {
       {isLoading ? (
         <LabelsSkeleton />
       ) : labels.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiPriceTag3Line />
@@ -210,7 +210,7 @@ export function LabelsView() {
           )}
         </Empty>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
+        <div className="overflow-hidden rounded-xl border border-border">
           {labels.map((label) => (
             <LabelRow
               key={label.id}
@@ -372,7 +372,7 @@ function LabelRow({
 
 function LabelsSkeleton() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
+    <div className="overflow-hidden rounded-xl border border-border">
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}

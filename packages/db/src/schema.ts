@@ -27,6 +27,8 @@ export type UserPreferences = {
   language?: string;
   showEmail?: boolean;
   wordWrap?: boolean;
+  /** Show anonymized private activity counts in the public contribution graph. */
+  includePrivateContributions?: boolean;
 };
 
 export const users = pgTable('users', {
@@ -839,6 +841,84 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
   actor: one(users, {
     fields: [notifications.actorId],
     references: [users.id],
+  }),
+}));
+
+export type ActivityPayload = {
+  branch?: string;
+  commitCount?: number;
+  commitCountCapped?: boolean;
+  oldOid?: string;
+  newOid?: string;
+  /** Issue / PR / discussion number. */
+  number?: number;
+  /** Issue / PR / discussion / release title. */
+  title?: string;
+  tagName?: string;
+  /** Review state: approved / changes_requested / commented. */
+  state?: string;
+  forkedFromOwner?: string;
+  forkedFromName?: string;
+};
+
+export const activities = pgTable(
+  'activities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    payload: jsonb('payload').$type<ActivityPayload>(),
+    targetType: text('target_type'),
+    targetId: uuid('target_id'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('activities_actor_created_idx').on(table.actorId, table.createdAt.desc()),
+    index('activities_repo_created_idx').on(table.repositoryId, table.createdAt.desc()),
+  ],
+);
+
+export const follows = pgTable(
+  'follows',
+  {
+    followerId: text('follower_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followingId: text('following_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.followerId, table.followingId] }),
+    index('follows_following_idx').on(table.followingId),
+  ],
+);
+
+export const followRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+  }),
+}));
+
+export const activityRelations = relations(activities, ({ one }) => ({
+  actor: one(users, {
+    fields: [activities.actorId],
+    references: [users.id],
+  }),
+  repository: one(repositories, {
+    fields: [activities.repositoryId],
+    references: [repositories.id],
   }),
 }));
 

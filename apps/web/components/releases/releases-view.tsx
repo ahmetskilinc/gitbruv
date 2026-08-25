@@ -161,7 +161,7 @@ export function ReleasesView() {
           <Spinner className="size-5" />
         </div>
       ) : releases.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiPriceTag3Line />

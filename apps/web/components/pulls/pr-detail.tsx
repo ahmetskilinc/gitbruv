@@ -62,7 +62,7 @@ type PRDetailProps = {
 /** Local bordered/divided stat table (the old app's StatStrip is not ported yet). */
 function StatStrip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-lg border border-border sm:grid-cols-4 sm:divide-y-0">
+    <div className="grid grid-cols-2 divide-x divide-y divide-border overflow-hidden rounded-xl border border-border sm:grid-cols-4 sm:divide-y-0">
       {children}
     </div>
   )
@@ -195,7 +195,7 @@ export function PRDetail({
               )}
             </StatStrip>
 
-            <div className="rounded-lg border border-border bg-card">
+            <div className="rounded-xl border border-border bg-card">
               <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
                 <Avatar className="size-6">
                   <AvatarImage src={pullRequest.author.avatarUrl || undefined} />
@@ -276,7 +276,7 @@ export function PRDetail({
                 />
               </>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">Could not load diff</div>
+              <div className="py-8 text-center text-sm text-muted-foreground">Could not load diff</div>
             )}
           </TabsContent>
         </Tabs>
@@ -288,7 +288,7 @@ export function PRDetail({
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-semibold">Review</h3>
               {showReviewForm ? (
-                <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+                <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
                   <Textarea
                     placeholder="Leave a comment (optional)"
                     value={reviewBody}
@@ -533,7 +533,7 @@ function InlineCommentsSection({
       </div>
 
       {isAdding && (
-        <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Select value={filePath} onValueChange={(value) => setFilePath(value as string)}>
               <SelectTrigger aria-label="File" size="sm" className="max-w-72 font-mono">
@@ -604,7 +604,7 @@ function InlineCommentsSection({
           </div>
         ))
       ) : (
-        <p className="text-sm text-muted-foreground">No inline comments yet.</p>
+        <p className="text-sm text-muted-foreground">No inline comments yet</p>
       )}
     </div>
   )
@@ -624,7 +624,7 @@ function ReviewItem({ review }: { review: PRReview }) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-xl border border-border bg-card">
       <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
         <Avatar className="size-5">
           <AvatarImage src={review.author.avatarUrl || undefined} />

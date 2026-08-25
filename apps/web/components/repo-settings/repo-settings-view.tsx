@@ -201,7 +201,7 @@ export function RepoSettingsView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <div>
                 <p className="font-medium">Delete this repository</p>
                 <p className="text-sm text-muted-foreground">
@@ -466,7 +466,7 @@ function BranchProtectionRuleRow({
     values.requiredReviewCount !== rule.requiredReviewCount
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border p-4">
+    <div className="flex flex-col gap-4 rounded-xl border p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <RiLockLine className="size-4 text-muted-foreground" />

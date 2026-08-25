@@ -50,7 +50,7 @@ function PageSkeleton() {
   return (
     <PageContainer>
       <Skeleton className="mb-6 h-7 w-36" />
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <CommitsSkeleton />
       </div>
     </PageContainer>
@@ -151,11 +151,11 @@ export function CommitsView() {
         }
       />
       {commitsLoading ? (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border">
           <CommitsSkeleton />
         </div>
       ) : commits.length === 0 ? (
-        <Empty className="border border-dashed py-12">
+        <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <RiHistoryLine />
@@ -167,7 +167,7 @@ export function CommitsView() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-xl border">
           <div className="divide-y">
             {commits.map((commit) => (
               <CommitRow

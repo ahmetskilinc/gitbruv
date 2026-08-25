@@ -41,6 +41,7 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
+  EmptyTitle,
 } from "@/components/ui/empty"
 import {
   Dialog,
@@ -424,14 +425,14 @@ export function OAuthTab() {
           </div>
 
           {clients && clients.length > 0 ? (
-            <div className="divide-y overflow-hidden rounded-lg border">
+            <div className="divide-y overflow-hidden rounded-xl border">
               {clients.map((client: OAuthClient) => (
                 <div key={client.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded bg-muted">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
                       {client.icon ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={client.icon} alt="" className="size-6 rounded" />
+                        <img src={client.icon} alt="" className="size-6 rounded-lg" />
                       ) : (
                         <RiCodeSSlashLine className="size-4 text-muted-foreground" />
                       )}
@@ -567,14 +568,13 @@ export function OAuthTab() {
               ))}
             </div>
           ) : (
-            <Empty className="border border-dashed py-8">
+            <Empty className="border-none py-8">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <RiCodeSSlashLine />
                 </EmptyMedia>
-                <EmptyDescription>
-                  No OAuth applications yet. Create one to get started.
-                </EmptyDescription>
+                <EmptyTitle>No OAuth applications yet</EmptyTitle>
+                <EmptyDescription>Create one to get started.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -642,14 +642,14 @@ export function OAuthTab() {
         </CardHeader>
         <CardContent>
           {consents && consents.length > 0 ? (
-            <div className="divide-y overflow-hidden rounded-lg border">
+            <div className="divide-y overflow-hidden rounded-xl border">
               {consents.map((consent: OAuthConsent) => (
                 <div key={consent.id} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded bg-muted">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-muted">
                       {consent.client?.icon ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={consent.client.icon} alt="" className="size-6 rounded" />
+                        <img src={consent.client.icon} alt="" className="size-6 rounded-lg" />
                       ) : (
                         <RiCodeSSlashLine className="size-4 text-muted-foreground" />
                       )}
@@ -703,14 +703,14 @@ export function OAuthTab() {
               ))}
             </div>
           ) : (
-            <Empty className="border border-dashed py-8">
+            <Empty className="border-none py-8">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <RiCheckboxCircleLine />
                 </EmptyMedia>
+                <EmptyTitle>No authorized applications</EmptyTitle>
                 <EmptyDescription>
-                  No authorized applications. When you authorize an application, it will appear
-                  here.
+                  When you authorize an application, it will appear here.
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>

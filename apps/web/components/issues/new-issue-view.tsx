@@ -49,7 +49,7 @@ export function NewIssueView() {
   return (
     <PageContainer size="narrow">
       <PageHeader title="New issue" />
-      <div className="rounded-lg border border-border p-6">
+      <div className="rounded-xl border border-border p-6">
         <IssueForm
           onSubmit={handleSubmit}
           onCancel={() => router.push(`/${username}/${repo}/issues`)}

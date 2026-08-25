@@ -76,7 +76,7 @@ export function RepoHome() {
       ) : isEmpty ? (
         <EmptyRepoState username={username} repoName={repo?.name || repoName} />
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <FileTree
             files={files}
             username={username}
@@ -89,7 +89,7 @@ export function RepoHome() {
       )}
 
       {isLoadingReadmeOid ? (
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <div className="flex items-center gap-2 border-b px-5 py-3">
             <Skeleton className="size-4" />
             <Skeleton className="h-4 w-24" />
@@ -97,7 +97,7 @@ export function RepoHome() {
           <ReadmeSkeleton />
         </div>
       ) : readmeOid ? (
-        <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <div className="flex items-center gap-2 border-b px-5 py-3">
             <RiBookOpenLine className="size-4 text-muted-foreground" />
             <span className="text-sm font-medium">README.md</span>
@@ -117,7 +117,7 @@ function FileTreeSkeleton() {
   const fileWidths = ["32%", "28%", "45%", "24%", "38%", "31%"]
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="overflow-hidden rounded-xl border bg-card">
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
@@ -150,7 +150,7 @@ function EmptyRepoState({
   repoName: string
 }) {
   return (
-    <Empty className="border border-dashed py-12">
+    <Empty>
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <RiGitBranchLine />

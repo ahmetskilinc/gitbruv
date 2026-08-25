@@ -110,7 +110,7 @@ export function NewPRView() {
       <PageContainer>
         <div className="flex flex-col gap-4">
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64" />
+          <Skeleton className="h-64 rounded-xl" />
         </div>
       </PageContainer>
     )

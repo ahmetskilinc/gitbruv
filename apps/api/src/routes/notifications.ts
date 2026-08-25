@@ -137,7 +137,8 @@ export type NotificationType =
   | "pr_merged"
   | "pr_assigned"
   | "mention"
-  | "discussion_reply";
+  | "discussion_reply"
+  | "user_follow";
 
 export type CreateNotificationInput = {
   userId: string;

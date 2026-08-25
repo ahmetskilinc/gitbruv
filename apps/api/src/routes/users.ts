@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { db, users, repositories, stars } from "@gitbruv/db";
+import { db, users, repositories, stars, follows } from "@gitbruv/db";
 import { eq, sql, desc, asc, and } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
+import { createNotification } from "./notifications";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -62,6 +63,10 @@ app.get("/api/users/public", async (c) => {
       username: users.username,
       avatarUrl: users.avatarUrl,
       bio: users.bio,
+      location: users.location,
+      company: users.company,
+      website: users.website,
+      lastActiveAt: users.lastActiveAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     })
@@ -232,6 +237,156 @@ app.get("/api/users/:username/starred", async (c) => {
   }));
 
   return c.json({ repos });
+});
+
+async function findUserByUsername(username: string) {
+  return db.query.users.findFirst({
+    where: eq(users.username, username),
+    columns: { id: true, username: true },
+  });
+}
+
+/** Toggle following a user. Returns the new state. */
+app.post("/api/users/:username/follow", requireAuth, async (c) => {
+  const user = c.get("user")!;
+  const target = await findUserByUsername(c.req.param("username"));
+
+  if (!target) {
+    return c.json({ error: "User not found" }, 404);
+  }
+  if (target.id === user.id) {
+    return c.json({ error: "You cannot follow yourself" }, 400);
+  }
+
+  const [existing] = await db
+    .select()
+    .from(follows)
+    .where(and(eq(follows.followerId, user.id), eq(follows.followingId, target.id)));
+
+  if (existing) {
+    await db
+      .delete(follows)
+      .where(and(eq(follows.followerId, user.id), eq(follows.followingId, target.id)));
+    return c.json({ following: false });
+  }
+
+  await db.insert(follows).values({ followerId: user.id, followingId: target.id });
+
+  // Best-effort notification; never fail the follow.
+  createNotification({
+    userId: target.id,
+    type: "user_follow",
+    title: `${user.username} followed you`,
+    actorId: user.id,
+  }).catch((err) => console.error("[users] follow notification failed:", err));
+
+  return c.json({ following: true });
+});
+
+/** Follower/following counts plus whether the viewer follows this user. */
+app.get("/api/users/:username/follow-info", async (c) => {
+  const viewer = c.get("user");
+  const target = await findUserByUsername(c.req.param("username"));
+
+  if (!target) {
+    return c.json({ error: "User not found" }, 404);
+  }
+
+  const [followerCount] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(follows)
+    .where(eq(follows.followingId, target.id));
+  const [followingCount] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(follows)
+    .where(eq(follows.followerId, target.id));
+
+  let isFollowing = false;
+  if (viewer && viewer.id !== target.id) {
+    const [existing] = await db
+      .select()
+      .from(follows)
+      .where(and(eq(follows.followerId, viewer.id), eq(follows.followingId, target.id)));
+    isFollowing = Boolean(existing);
+  }
+
+  return c.json({
+    followers: Number(followerCount?.count) || 0,
+    following: Number(followingCount?.count) || 0,
+    isFollowing,
+  });
+});
+
+const followUserSelect = {
+  id: users.id,
+  username: users.username,
+  name: users.name,
+  avatarUrl: users.avatarUrl,
+  bio: users.bio,
+  updatedAt: users.updatedAt,
+};
+
+function shapeFollowUser(row: {
+  id: string;
+  username: string;
+  name: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  updatedAt: Date;
+}) {
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.name,
+    avatarUrl: cacheBustAvatarUrl(row.avatarUrl, row.updatedAt),
+    bio: row.bio,
+  };
+}
+
+app.get("/api/users/:username/followers", async (c) => {
+  const target = await findUserByUsername(c.req.param("username"));
+  if (!target) {
+    return c.json({ error: "User not found" }, 404);
+  }
+  const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 50);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
+
+  const rows = await db
+    .select(followUserSelect)
+    .from(follows)
+    .innerJoin(users, eq(follows.followerId, users.id))
+    .where(eq(follows.followingId, target.id))
+    .orderBy(desc(follows.createdAt))
+    .limit(limit + 1)
+    .offset(offset);
+
+  return c.json({
+    users: rows.slice(0, limit).map(shapeFollowUser),
+    hasMore: rows.length > limit,
+  });
+});
+
+app.get("/api/users/:username/following", async (c) => {
+  const target = await findUserByUsername(c.req.param("username"));
+  if (!target) {
+    return c.json({ error: "User not found" }, 404);
+  }
+  const limit = Math.min(parseInt(c.req.query("limit") || "20", 10), 50);
+  const offset = parseInt(c.req.query("offset") || "0", 10);
+
+  const rows = await db
+    .select(followUserSelect)
+    .from(follows)
+    .innerJoin(users, eq(follows.followingId, users.id))
+    .where(eq(follows.followerId, target.id))
+    .orderBy(desc(follows.createdAt))
+    .limit(limit + 1)
+    .offset(offset);
+
+  return c.json({
+    users: rows.slice(0, limit).map(shapeFollowUser),
+    hasMore: rows.length > limit,
+  });
 });
 
 export default app;

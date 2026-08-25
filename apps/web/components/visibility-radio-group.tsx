@@ -50,7 +50,7 @@ export function VisibilityRadioGroup({
         <Label
           key={option.value}
           className={cn(
-            "flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal transition-colors duration-150 ease-out-expo motion-reduce:transition-none",
+            "flex cursor-pointer items-start gap-3 rounded-xl border p-3 font-normal transition-colors duration-150 ease-out-expo motion-reduce:transition-none",
             value === option.value
               ? "border-primary bg-primary/5"
               : "border-border hover:border-muted-foreground/50",

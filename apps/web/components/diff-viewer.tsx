@@ -92,7 +92,7 @@ export function DiffToolbar({
         <DiffStats stats={stats} />
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex overflow-hidden rounded-lg border">
+        <div className="flex overflow-hidden rounded-xl border">
           <Button
             variant={viewMode === "unified" ? "secondary" : "ghost"}
             size="sm"
@@ -185,7 +185,7 @@ function FileDiffView({ file, viewMode }: { file: FileDiff; viewMode: DiffViewMo
   const patchContent = fileDiffToUnifiedDiff(file)
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-hidden rounded-xl border">
       <FileHeader
         file={file}
         isExpanded={isExpanded}
@@ -193,7 +193,7 @@ function FileDiffView({ file, viewMode }: { file: FileDiff; viewMode: DiffViewMo
       />
       {isExpanded &&
         (file.hunks.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             No changes to display (binary file or empty diff)
           </div>
         ) : (
@@ -221,7 +221,7 @@ export function DiffViewer({
 }) {
   if (files.length === 0) {
     return (
-      <div className="rounded-lg border p-8 text-center text-muted-foreground">
+      <div className="rounded-xl border py-8 text-center text-sm text-muted-foreground">
         No files changed in this commit
       </div>
     )
@@ -269,7 +269,7 @@ export function FilePickerSidebar({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border bg-card">
       <div className="border-b bg-muted/50 px-3 py-2">
         <span className="text-sm font-medium">{files.length} files</span>
       </div>

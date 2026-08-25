@@ -32,7 +32,7 @@ function CodeSkeleton() {
 function PageSkeleton() {
   return (
     <PageContainer size="wide" className="pt-0">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <div className="h-10 border-b bg-muted/30" />
         <CodeSkeleton />
       </div>
@@ -83,7 +83,7 @@ export function BlobView() {
 
   return (
     <PageContainer size="wide" className="pt-0">
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-xl border">
         <PathBreadcrumb
           username={username}
           repoName={repoName}
@@ -101,7 +101,7 @@ export function BlobView() {
         {fileLoading ? (
           <CodeSkeleton />
         ) : fileError || !fileData ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-muted-foreground">
             Failed to load file
           </div>
         ) : (

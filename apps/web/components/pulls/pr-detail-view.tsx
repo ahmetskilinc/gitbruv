@@ -319,15 +319,15 @@ function PRDetailSkeleton() {
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         <div className="lg:col-span-3">
-          <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
+          <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-5/6" />
             <Skeleton className="h-32 w-4/5" />
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
         </div>
       </div>
     </div>
@@ -340,7 +340,7 @@ function CommentsSkeleton() {
       {Array.from({ length: 2 }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
+          className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
         >
           <div className="flex items-center gap-2">
             <Skeleton className="size-5 rounded-full" />
