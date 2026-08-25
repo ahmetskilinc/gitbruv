@@ -1,7 +1,7 @@
 import { createApiClient } from "@gitbruv/lib";
 import type { ApiClient } from "@gitbruv/hooks";
 import { authClient } from "@/lib/auth-client";
-import { getApiUrl } from "@/lib/utils";
+import { getApiUrl } from "@/lib/env";
 
 const baseClient = createApiClient({
   baseUrl: getApiUrl() || "",

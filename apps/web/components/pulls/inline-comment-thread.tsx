@@ -1,41 +1,42 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Message01Icon, MoreVerticalIcon } from "@hugeicons-pro/core-stroke-standard";
-import { formatRelativeTime } from "@gitbruv/lib";
-import type { PRComment } from "@gitbruv/hooks";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { InlineCommentForm } from "./inline-comment-form";
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { RiChat1Line, RiMore2Line } from "@remixicon/react"
+
+import type { PRComment } from "@gitbruv/hooks"
+import { formatRelativeTime } from "@gitbruv/lib"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { InlineCommentForm } from "./inline-comment-form"
 
 export type InlineCommentThreadProps = {
-  comments: PRComment[];
-  onReply: (body: string, replyToId: string) => Promise<void>;
-  onEdit?: (commentId: string, body: string) => Promise<void>;
-  onDelete?: (commentId: string) => Promise<void>;
-  currentUserId?: string;
-  isReplying?: boolean;
-};
+  comments: PRComment[]
+  onReply: (body: string, replyToId: string) => Promise<void>
+  onEdit?: (commentId: string, body: string) => Promise<void>
+  onDelete?: (commentId: string) => Promise<void>
+  currentUserId?: string
+  isReplying?: boolean
+}
 
 function CommentItem({
   comment,
   onEdit,
-  _onDelete,
   currentUserId,
 }: {
-  comment: PRComment;
-  onEdit?: (body: string) => Promise<void>;
-  _onDelete?: () => Promise<void>;
-  currentUserId?: string;
+  comment: PRComment
+  onEdit?: (body: string) => Promise<void>
+  currentUserId?: string
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editBody, setEditBody] = useState(comment.body);
-  const isAuthor = currentUserId === comment.author.id;
+  const [isEditing, setIsEditing] = useState(false)
+  const [editBody, setEditBody] = useState(comment.body)
+  const isAuthor = currentUserId === comment.author.id
 
   async function handleSaveEdit() {
-    if (!editBody.trim() || !onEdit) return;
-    await onEdit(editBody);
-    setIsEditing(false);
+    if (!editBody.trim() || !onEdit) return
+    await onEdit(editBody)
+    setIsEditing(false)
   }
 
   return (
@@ -46,28 +47,25 @@ function CommentItem({
           {comment.author.name?.charAt(0) || comment.author.username?.charAt(0) || "?"}
         </AvatarFallback>
       </Avatar>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 text-sm">
-          <Link
-            to="/$username"
-            params={{ username: comment.author.username }}
-            className="font-medium hover:underline"
-          >
+          <Link href={`/${comment.author.username}`} className="font-medium hover:underline">
             {comment.author.username}
           </Link>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             {formatRelativeTime(comment.createdAt)}
           </span>
           {comment.createdAt !== comment.updatedAt && (
-            <span className="text-muted-foreground text-xs">(edited)</span>
+            <span className="text-xs text-muted-foreground">(edited)</span>
           )}
         </div>
         {isEditing ? (
-          <div className="mt-2 space-y-2">
-            <textarea
+          <div className="mt-2 flex flex-col gap-2">
+            <Textarea
+              aria-label="Edit comment"
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
-              className="w-full p-2 text-sm border border-border bg-background resize-none"
+              className="resize-none text-sm"
               rows={3}
             />
             <div className="flex gap-2">
@@ -80,7 +78,7 @@ function CommentItem({
             </div>
           </div>
         ) : (
-          <div className="mt-1 text-sm text-foreground/90 whitespace-pre-wrap">
+          <div className="mt-1 text-sm whitespace-pre-wrap text-foreground/90">
             {comment.body}
           </div>
         )}
@@ -92,52 +90,51 @@ function CommentItem({
             size="icon-xs"
             onClick={() => setIsEditing(true)}
             title="Edit"
+            aria-label="Edit comment"
           >
-            <HugeiconsIcon icon={MoreVerticalIcon} strokeWidth={2} className="size-4" />
+            <RiMore2Line className="size-4" />
           </Button>
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export function InlineCommentThread({
   comments,
   onReply,
   onEdit,
-  onDelete,
   currentUserId,
   isReplying: externalIsReplying = false,
 }: InlineCommentThreadProps) {
-  const [isReplying, setIsReplying] = useState(false);
-  const [replyLoading, setReplyLoading] = useState(false);
+  const [isReplying, setIsReplying] = useState(false)
+  const [replyLoading, setReplyLoading] = useState(false)
 
-  const rootComments = comments.filter((c) => !c.replyToId);
-  const replies = comments.filter((c) => c.replyToId);
+  const rootComments = comments.filter((c) => !c.replyToId)
+  const replies = comments.filter((c) => c.replyToId)
 
   function getReplies(commentId: string): PRComment[] {
-    return replies.filter((r) => r.replyToId === commentId);
+    return replies.filter((r) => r.replyToId === commentId)
   }
 
   async function handleReply(body: string) {
-    if (comments.length === 0) return;
-    setReplyLoading(true);
+    if (comments.length === 0) return
+    setReplyLoading(true)
     try {
-      await onReply(body, comments[0].id);
-      setIsReplying(false);
+      await onReply(body, comments[0].id)
+      setIsReplying(false)
     } finally {
-      setReplyLoading(false);
+      setReplyLoading(false)
     }
   }
 
   return (
-    <div className="border border-border bg-card/50 overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-border bg-card/50">
       {rootComments.map((comment) => (
         <div key={comment.id}>
           <CommentItem
             comment={comment}
             onEdit={onEdit ? (body) => onEdit(comment.id, body) : undefined}
-            onDelete={onDelete ? () => onDelete(comment.id) : undefined}
             currentUserId={currentUserId}
           />
           {getReplies(comment.id).map((reply) => (
@@ -145,7 +142,6 @@ export function InlineCommentThread({
               <CommentItem
                 comment={reply}
                 onEdit={onEdit ? (body) => onEdit(reply.id, body) : undefined}
-                onDelete={onDelete ? () => onDelete(reply.id) : undefined}
                 currentUserId={currentUserId}
               />
             </div>
@@ -171,11 +167,11 @@ export function InlineCommentThread({
             onClick={() => setIsReplying(true)}
             className="text-muted-foreground"
           >
-            <HugeiconsIcon icon={Message01Icon} strokeWidth={2} className="size-4 mr-1" />
+            <RiChat1Line className="size-4" />
             Reply
           </Button>
         </div>
       )}
     </div>
-  );
+  )
 }

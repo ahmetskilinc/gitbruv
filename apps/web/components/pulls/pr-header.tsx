@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+"use client"
+
+import { useState } from "react"
+import { RiDeleteBinLine, RiGitMergeLine, RiPencilLine } from "@remixicon/react"
+
+import type { PullRequest } from "@gitbruv/hooks"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,20 +14,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Edit02Icon, Delete02Icon, GitMergeIcon, Loading02Icon } from "@hugeicons-pro/core-stroke-standard";
-import type { PullRequest } from "@gitbruv/hooks";
-import { PRStateBadge } from "./pr-state-badge";
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
+import { PRStateBadge } from "./pr-state-badge"
 
-interface PRHeaderProps {
-  pullRequest: PullRequest;
-  isOwner: boolean;
-  currentUserId?: string;
-  onUpdate: (data: { title?: string; body?: string; state?: "open" | "closed" }) => Promise<void>;
-  onDelete: () => Promise<void>;
-  onMerge: () => Promise<void>;
-  isMerging: boolean;
+type PRHeaderProps = {
+  pullRequest: PullRequest
+  isOwner: boolean
+  currentUserId?: string
+  onUpdate: (data: { title?: string; body?: string; state?: "open" | "closed" }) => Promise<void>
+  onDelete: () => Promise<void>
+  onMerge: () => Promise<void>
+  isMerging: boolean
+  onMarkReady: () => Promise<void>
+  isMarkingReady: boolean
 }
 
 export function PRHeader({
@@ -35,29 +40,33 @@ export function PRHeader({
   onDelete,
   onMerge,
   isMerging,
+  onMarkReady,
+  isMarkingReady,
 }: PRHeaderProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(pullRequest.title);
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedTitle, setEditedTitle] = useState(pullRequest.title)
 
-  const canEdit = currentUserId === pullRequest.author.id || isOwner;
-  const canMerge = (currentUserId === pullRequest.author.id || isOwner) && pullRequest.state === "open";
-  const canDelete = isOwner;
+  const canEdit = currentUserId === pullRequest.author.id || isOwner
+  const canMerge =
+    (currentUserId === pullRequest.author.id || isOwner) && pullRequest.state === "open"
+  const canDelete = isOwner
+  const isDraft = pullRequest.isDraft && pullRequest.state === "open"
 
   const handleSaveTitle = async () => {
     if (editedTitle.trim() && editedTitle !== pullRequest.title) {
-      await onUpdate({ title: editedTitle });
+      await onUpdate({ title: editedTitle })
     }
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   const handleToggleState = async () => {
-    const newState = pullRequest.state === "open" ? "closed" : "open";
-    await onUpdate({ state: newState });
-  };
+    const newState = pullRequest.state === "open" ? "closed" : "open"
+    await onUpdate({ state: newState })
+  }
 
   return (
-    <div className="flex items-start gap-3 mb-4">
-      <div className="flex-1 min-w-0">
+    <div className="mb-4 flex items-start gap-3">
+      <div className="min-w-0 flex-1">
         {isEditing ? (
           <div className="flex items-center gap-2">
             <Input
@@ -74,32 +83,53 @@ export function PRHeader({
             </Button>
           </div>
         ) : (
-          <div className="flex items-start gap-3 flex-wrap">
+          <div className="flex flex-wrap items-start gap-3">
             <h1 className="text-2xl font-bold">{pullRequest.title}</h1>
             <span className="text-2xl text-muted-foreground">#{pullRequest.number}</span>
             {canEdit && (
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setIsEditing(true)}>
-                <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-4" />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-6"
+                aria-label="Edit title"
+                onClick={() => setIsEditing(true)}
+              >
+                <RiPencilLine className="size-4" />
               </Button>
             )}
           </div>
         )}
-        <div className="flex items-center gap-2 mt-1">
-          <PRStateBadge state={pullRequest.state} merged={pullRequest.merged} />
+        <div className="mt-1 flex items-center gap-2">
+          <PRStateBadge
+            state={pullRequest.state}
+            merged={pullRequest.merged}
+            isDraft={pullRequest.isDraft}
+          />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        {canMerge && !pullRequest.merged && (
-          <Button onClick={onMerge} disabled={isMerging} className="bg-purple-600 hover:bg-purple-700">
+      <div className="flex shrink-0 items-center gap-2">
+        {canEdit && isDraft && !pullRequest.merged && (
+          <Button variant="outline" onClick={onMarkReady} disabled={isMarkingReady}>
+            {isMarkingReady && <Spinner />}
+            {isMarkingReady ? "Marking ready..." : "Ready for review"}
+          </Button>
+        )}
+
+        {canMerge && !pullRequest.merged && !isDraft && (
+          <Button
+            onClick={onMerge}
+            disabled={isMerging}
+            className="bg-purple-500 text-white hover:bg-purple-500/90"
+          >
             {isMerging ? (
               <>
-                <HugeiconsIcon icon={Loading02Icon} strokeWidth={2} className="size-4 mr-2 animate-spin" />
+                <Spinner />
                 Merging...
               </>
             ) : (
               <>
-                <HugeiconsIcon icon={GitMergeIcon} strokeWidth={2} className="size-4 mr-2" />
+                <RiGitMergeLine className="size-4" />
                 Merge pull request
               </>
             )}
@@ -114,21 +144,32 @@ export function PRHeader({
 
         {canDelete && (
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="icon" className="text-red-600 hover:text-red-700">
-                <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Delete pull request"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <RiDeleteBinLine className="size-4" />
+                </Button>
+              }
+            />
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete pull request</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this pull request? This action cannot be undone.
+                  Are you sure you want to delete this pull request? This action cannot be
+                  undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete} className="bg-red-600 hover:bg-red-700">
+                <AlertDialogAction
+                  onClick={onDelete}
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                >
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -137,5 +178,5 @@ export function PRHeader({
         )}
       </div>
     </div>
-  );
+  )
 }

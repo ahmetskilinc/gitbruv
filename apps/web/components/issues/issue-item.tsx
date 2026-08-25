@@ -1,29 +1,31 @@
-import { Link } from "@tanstack/react-router";
-import { timeAgo } from "@gitbruv/lib";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Comment01Icon } from "@hugeicons-pro/core-stroke-standard";
-import type { Issue } from "@gitbruv/hooks";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { StateBadge } from "./state-badge";
-import { LabelBadge } from "./label-badge";
+"use client"
+
+import Link from "next/link"
+import { RiChat1Line } from "@remixicon/react"
+import { timeAgo } from "@gitbruv/lib"
+import type { Issue } from "@gitbruv/hooks"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { StateIcon } from "./state-badge"
+import { LabelBadge } from "./label-badge"
 
 interface IssueItemProps {
-  issue: Issue;
-  username: string;
-  repo: string;
+  issue: Issue
+  username: string
+  repo: string
 }
 
 export function IssueItem({ issue, username, repo }: IssueItemProps) {
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
-      <StateBadge state={issue.state} className="mt-0.5 shrink-0" />
+  const issueHref = `/${username}/${repo}/issues/${issue.number}`
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2 flex-wrap">
+  return (
+    <div className="flex items-start gap-3 border-b border-border px-4 py-3 transition-colors duration-100 last:border-b-0 hover:bg-muted/30 motion-reduce:transition-none">
+      <StateIcon state={issue.state} className="mt-1 shrink-0" />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
-            to="/$username/$repo/issues/$number"
-            params={{ username, repo, number: String(issue.number) }}
-            className="font-semibold text-foreground hover:text-primary transition-colors"
+            href={issueHref}
+            className="font-medium text-foreground transition-colors duration-100 hover:text-primary motion-reduce:transition-none"
           >
             {issue.title}
           </Link>
@@ -32,31 +34,30 @@ export function IssueItem({ issue, username, repo }: IssueItemProps) {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <span>#{issue.number}</span>
           <span>opened {timeAgo(issue.createdAt)}</span>
           <span>by</span>
           <Link
-            to="/$username"
-            params={{ username: issue.author.username }}
-            className="hover:text-foreground transition-colors"
+            href={`/${issue.author.username}`}
+            className="transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
           >
             {issue.author.username}
           </Link>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex shrink-0 items-center gap-3">
         {issue.assignees.length > 0 && (
           <div className="flex -space-x-1.5">
             {issue.assignees.slice(0, 3).map((assignee) => (
-              <Avatar key={assignee.id} className="h-5 w-5 border-2 border-background">
+              <Avatar key={assignee.id} className="size-5 border-2 border-background">
                 <AvatarImage src={assignee.avatarUrl || undefined} />
                 <AvatarFallback className="text-[10px]">{assignee.name.charAt(0)}</AvatarFallback>
               </Avatar>
             ))}
             {issue.assignees.length > 3 && (
-              <span className="flex items-center justify-center h-5 w-5 bg-secondary text-[10px] font-medium border-2 border-background">
+              <span className="flex size-5 items-center justify-center rounded-full border-2 border-background bg-secondary text-[10px] font-medium">
                 +{issue.assignees.length - 3}
               </span>
             )}
@@ -65,15 +66,14 @@ export function IssueItem({ issue, username, repo }: IssueItemProps) {
 
         {issue.commentCount > 0 && (
           <Link
-            to="/$username/$repo/issues/$number"
-            params={{ username, repo, number: String(issue.number) }}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            href={issueHref}
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
           >
-            <HugeiconsIcon icon={Comment01Icon} strokeWidth={2} className="size-3.5" />
+            <RiChat1Line className="size-3.5" />
             <span>{issue.commentCount}</span>
           </Link>
         )}
       </div>
     </div>
-  );
+  )
 }

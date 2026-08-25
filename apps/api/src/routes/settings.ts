@@ -167,18 +167,27 @@ app.patch("/api/settings/email", requireAuth, async (c) => {
   const user = c.get("user")!;
   const body = await c.req.json<{ email: string }>();
 
+  const email = body.email?.trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return c.json({ error: "Invalid email address" }, 400);
+  }
+
   const existing = await db.query.users.findFirst({
-    where: and(eq(users.email, body.email), ne(users.id, user.id)),
+    where: and(eq(users.email, email), ne(users.id, user.id)),
   });
 
   if (existing) {
     return c.json({ error: "Email already in use" }, 400);
   }
 
+  // A newly-set email is unverified until the user confirms it. Never carry the
+  // previous verified status over to an attacker-chosen address, since
+  // emailVerified flows into OIDC `email_verified` claims.
   const [updated] = await db
     .update(users)
     .set({
-      email: body.email,
+      email,
+      emailVerified: false,
       updatedAt: new Date(),
     })
     .where(eq(users.id, user.id))

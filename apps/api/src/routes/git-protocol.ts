@@ -10,6 +10,10 @@ import * as zlib from "zlib";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
+// Maximum size of a single git push body. The body is buffered and unpacked in
+// memory, so this bounds per-request memory use.
+const MAX_PUSH_BYTES = 500 * 1024 * 1024; // 500 MB
+
 app.use("*", authMiddleware);
 
 async function resolveBasicAuthUser(authHeader: string | undefined): Promise<AuthUser | null> {
@@ -573,8 +577,17 @@ async function unpackPackFile(
       objectsToStore.push({ oid, type: typeStr, data: resolved.data });
     }
 
+    // If any object failed to resolve (e.g. a thin-pack REF_DELTA whose base is
+    // missing), the pack is incomplete. Storing it and advancing the ref would
+    // leave the branch pointing at objects that don't exist, permanently
+    // breaking the repo — so fail the whole push instead of reporting success.
     if (failed > 0) {
-      console.warn(`[API] unpack: failed to resolve ${failed} objects`);
+      console.error(`[API] unpack: failed to resolve ${failed} objects; rejecting push`);
+      return {
+        success: false,
+        objectCount: 0,
+        error: `pack is incomplete: ${failed} object(s) could not be resolved (missing delta base)`,
+      };
     }
 
     console.log(`[API] unpack: storing ${objectsToStore.length} objects in parallel batches`);
@@ -616,9 +629,20 @@ app.post("/:owner/:name/git-receive-pack", async (c) => {
   }
 
   console.log(`[API] receive-pack: received request for ${owner}/${name}`);
+
+  // The whole push body is buffered in memory and unpacked, so cap its size to
+  // avoid a single large (or malicious) push OOMing the process.
+  const contentLength = parseInt(c.req.header("content-length") || "0", 10);
+  if (Number.isFinite(contentLength) && contentLength > MAX_PUSH_BYTES) {
+    return c.json({ error: "Push exceeds maximum allowed size" }, 413);
+  }
+
   const body = await c.req.arrayBuffer();
   const requestData = Buffer.from(body);
   console.log(`[API] receive-pack: received ${requestData.length} bytes`);
+  if (requestData.length > MAX_PUSH_BYTES) {
+    return c.json({ error: "Push exceeds maximum allowed size" }, 413);
+  }
 
   try {
 
@@ -789,17 +813,37 @@ app.post("/:owner/:name/git-receive-pack", async (c) => {
       }
     }
 
+    const zeroOid = "0".repeat(40);
+    const appliedUpdates: typeof allowedUpdates = [];
+
     for (const update of allowedUpdates) {
       const refPath = update.ref.startsWith("refs/") ? update.ref : `refs/heads/${update.ref}`;
       const refKey = `repos/${result.userId}/${repo.name}/${refPath}`;
 
-      if (update.newOid === "0".repeat(40)) {
+      // Compare-and-swap: the ref must still hold the oldOid the client based
+      // its push on. If another push landed in between, the current value won't
+      // match and applying this update would silently drop those commits — so
+      // reject it as non-fast-forward and let the client fetch and retry.
+      const currentRaw = await getObject(refKey).catch(() => null);
+      const currentOid = currentRaw ? currentRaw.toString("utf8").trim() : zeroOid;
+
+      if (currentOid !== update.oldOid) {
+        rejectedRefLines.push(
+          `ng ${update.ref} stale info: ref changed on server (expected ${update.oldOid}, found ${currentOid})`
+        );
+        rejectedRefSet.add(update.ref);
+        continue;
+      }
+
+      if (update.newOid === zeroOid) {
         await deleteObject(refKey).catch(() => { /* intentional no-op */ });
       } else {
         await putObject(refKey, Buffer.from(update.newOid + "\n"));
-
       }
+      appliedUpdates.push(update);
     }
+
+    allowedUpdates = appliedUpdates;
 
     for (const update of allowedUpdates) {
       const branch = update.ref.startsWith("refs/heads/")

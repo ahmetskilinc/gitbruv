@@ -3,15 +3,19 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 concurrency:
-  group: ci-${{ github.head_ref }}
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   lint:
-    name: Lint
+    name: Lint & Typecheck
     runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_HUGEICONS_KEY: ${{ secrets.NPM_CONFIG_HUGEICONS_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,9 +23,11 @@ jobs:
         with:
           bun-version: latest
 
-      - run: bun install
+      - run: bun install --frozen-lockfile
 
       - run: bunx turbo lint
+
+      - run: bunx turbo typecheck
 
   build:
     name: Build ${{ matrix.app }}
@@ -59,8 +65,9 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: false
           build-args: |
-            NPM_CONFIG_HUGEICONS_KEY=${{ secrets.NPM_CONFIG_HUGEICONS_KEY }}
             API_URL=http://localhost:3001
-            VITE_API_URL=http://localhost:3001
+            NEXT_PUBLIC_API_URL=http://localhost:3001
+          secrets: |
+            hugeicons=${{ secrets.NPM_CONFIG_HUGEICONS_KEY }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}

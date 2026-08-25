@@ -1,68 +1,91 @@
-import { Link } from "@tanstack/react-router";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ClockIcon } from "@hugeicons-pro/core-stroke-standard";
-import { cn, formatDate } from "@gitbruv/lib";
-import { type RepositoryWithStars } from "@gitbruv/hooks";
-import { buttonVariants } from "./ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { StarButton } from "./star-button";
+"use client"
 
-export default function RepositoryCard({ repository, showOwner = false }: { repository: RepositoryWithStars; showOwner?: boolean }) {
+import Link from "next/link"
+import { RiTimeLine } from "@remixicon/react"
+import { formatDate } from "@gitbruv/lib"
+import { type RepositoryWithStars } from "@gitbruv/hooks"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { StarButton } from "@/components/star-button"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
-
+export default function RepositoryCard({
+  repository,
+  showOwner = false,
+}: {
+  repository: RepositoryWithStars
+  showOwner?: boolean
+}) {
   return (
-    <div className="group/project relative border border-border bg-card p-4 hover:border-primary/30 transition-colors">
-      <Link to="/$username/$repo" params={{ username: repository.owner.username, repo: repository.name }} className="absolute inset-0" />
-      <span className="sr-only">View {repository.name}</span>
-      <div className="flex items-start gap-3">
-        <Link to="/$username" params={{ username: repository.owner.username }} onClick={(e) => e.stopPropagation()} className="z-10 shrink-0">
-          <Avatar className="h-12 w-12 rounded-none border-none after:border-none">
+    <Card className="gap-2 py-4 transition-[background-color,box-shadow] duration-150 ease-out-expo hover:bg-muted/40 motion-reduce:transition-none">
+      <CardHeader className="flex flex-row items-start gap-3 px-4">
+        <Link
+          href={`/${repository.owner.username}`}
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Avatar className="size-10">
             <AvatarImage
               src={repository.owner.avatarUrl || undefined}
-              alt={repository.name || "Repository Logo"}
-              className="transition-opacity hover:opacity-80 rounded-none border-none"
+              alt={repository.name || "Repository owner"}
+              className="transition-opacity hover:opacity-80"
             />
-            <AvatarFallback className="bg-muted text-muted-foreground font-semibold rounded-none">
-              {repository.owner.name.charAt(0).toUpperCase() || repository.owner.username.charAt(0).toUpperCase()}
+            <AvatarFallback className="bg-muted font-semibold text-muted-foreground">
+              {(repository.owner.name || repository.owner.username)
+                .charAt(0)
+                .toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <h3 className="truncate text-sm font-medium">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="min-w-0 truncate text-sm/5 font-semibold">
               {showOwner ? (
                 <>
                   <Link
-                    to="/$username"
-                    params={{ username: repository.owner.username }}
+                    href={`/${repository.owner.username}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="z-10 text-muted-foreground hover:text-primary"
+                    className="text-muted-foreground hover:text-primary"
                   >
                     {repository.owner.username}
                   </Link>
-                  <span className="text-muted-foreground mx-0.5">/</span>
-                  <span className="text-foreground">{repository.name}</span>
+                  <span className="mx-0.5 text-muted-foreground">/</span>
+                  <Link
+                    href={`/${repository.owner.username}/${repository.name}`}
+                    className="text-foreground hover:text-primary hover:underline"
+                  >
+                    {repository.name}
+                  </Link>
                 </>
               ) : (
-                repository.name
+                <Link
+                  href={`/${repository.owner.username}/${repository.name}`}
+                  className="hover:text-primary hover:underline"
+                >
+                  {repository.name}
+                </Link>
               )}
             </h3>
             <div className="flex items-center gap-2">
               {repository.visibility === "private" && (
-                <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-7")}>Private</span>
+                <Badge variant="outline">Private</Badge>
               )}
-              <StarButton repository={repository} className=" z-10" />
-            </div>
-          </div>
-          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{repository.description || "No description"}</p>
-          <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <HugeiconsIcon icon={ClockIcon} strokeWidth={2} className="size-3" />
-              <span>{formatDate(repository.createdAt, "MMM d, yyyy")}</span>
+              <StarButton repository={repository} />
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+      </CardHeader>
+      <CardContent className="px-4 pl-[4.25rem]">
+        <p className="line-clamp-2 text-sm/5 text-muted-foreground">
+          {repository.description || "No description"}
+        </p>
+        <div className="mt-2 flex items-center gap-3 text-xs/4 text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <RiTimeLine className="size-3" />
+            <span>{formatDate(repository.createdAt, "MMM d, yyyy")}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

@@ -33,7 +33,7 @@ export interface ApiClientConfig {
 }
 
 export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "settings"> & {
-  settings: Omit<ApiClient["settings"], "updateAvatar" | "deleteAvatar">;
+  settings: Omit<ApiClient["settings"], "updateAvatar">;
 } {
   const { baseUrl, getAuthHeaders, fetchOptions = {} } = config;
 
@@ -676,6 +676,70 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
 
       deleteItem: (itemId: string) =>
         apiFetch<{ success: boolean }>(`/api/projects/items/${itemId}`, {
+          method: "DELETE",
+        }),
+    },
+
+    milestones: {
+      list: (owner: string, repo: string, state: "open" | "closed" = "open") =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/milestones?state=${state}`),
+
+      create: (owner: string, repo: string, data: { title: string; description?: string; dueOn?: string }) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/milestones`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+
+      update: (
+        id: string,
+        data: { title?: string; description?: string; state?: string; dueOn?: string | null }
+      ) =>
+        apiFetch<{ success: boolean }>(`/api/milestones/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      delete: (id: string) =>
+        apiFetch<{ success: boolean }>(`/api/milestones/${id}`, {
+          method: "DELETE",
+        }),
+    },
+
+    releases: {
+      list: (owner: string, repo: string) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases`),
+
+      get: (owner: string, repo: string, tag: string) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases/${encodeURIComponent(tag)}`),
+
+      create: (
+        owner: string,
+        repo: string,
+        data: {
+          tagName: string;
+          targetCommitish?: string;
+          name?: string;
+          body?: string;
+          isDraft?: boolean;
+          isPrerelease?: boolean;
+        }
+      ) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+
+      update: (
+        id: string,
+        data: { name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }
+      ) =>
+        apiFetch<{ success: boolean }>(`/api/releases/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      delete: (id: string) =>
+        apiFetch<{ success: boolean }>(`/api/releases/${id}`, {
           method: "DELETE",
         }),
     },

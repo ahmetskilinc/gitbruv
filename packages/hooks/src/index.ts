@@ -9,3 +9,5 @@ export * from "./search";
 export * from "./notifications";
 export * from "./discussions";
 export * from "./projects";
+export * from "./milestones";
+export * from "./releases";

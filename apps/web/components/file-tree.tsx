@@ -1,129 +1,147 @@
-import { timeAgo } from "@gitbruv/lib";
-import { Link } from "@tanstack/react-router";
-import { File, FileAudio, FileCode, FileImage, FileJson, FileText, FileVideo, Folder } from "lucide-react";
-import type { FileLastCommit } from "@gitbruv/hooks";
-import { cn } from "@/lib/utils";
+"use client"
+
+import Link from "next/link"
+import { timeAgo } from "@gitbruv/lib"
+import {
+  RiFile3Line,
+  RiFileCodeLine,
+  RiFileImageLine,
+  RiFileMusicLine,
+  RiFileTextLine,
+  RiFileVideoLine,
+  RiBracesLine,
+  RiFolder3Fill,
+} from "@remixicon/react"
+import type { FileLastCommit } from "@gitbruv/hooks"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type FileEntry = {
-  name: string;
-  type: "blob" | "tree";
-  oid: string;
-  path: string;
-};
+  name: string
+  type: "blob" | "tree"
+  oid: string
+  path: string
+}
 
 type FileTreeProps = {
-  files: FileEntry[];
-  username: string;
-  repoName: string;
-  branch: string;
-  basePath?: string;
-  commits?: FileLastCommit[];
-  isLoadingCommits?: boolean;
-};
+  files: FileEntry[]
+  username: string
+  repoName: string
+  branch: string
+  commits?: FileLastCommit[]
+  isLoadingCommits?: boolean
+}
 
-const FILE_ICONS: Record<string, React.ElementType> = {
-  ts: FileCode,
-  tsx: FileCode,
-  js: FileCode,
-  jsx: FileCode,
-  py: FileCode,
-  rb: FileCode,
-  go: FileCode,
-  rs: FileCode,
-  java: FileCode,
-  c: FileCode,
-  cpp: FileCode,
-  h: FileCode,
-  hpp: FileCode,
-  cs: FileCode,
-  php: FileCode,
-  sh: FileCode,
-  md: FileText,
-  txt: FileText,
-  json: FileJson,
-  yaml: FileJson,
-  yml: FileJson,
-  toml: FileJson,
-  png: FileImage,
-  jpg: FileImage,
-  jpeg: FileImage,
-  gif: FileImage,
-  svg: FileImage,
-  webp: FileImage,
-  mp3: FileAudio,
-  wav: FileAudio,
-  mp4: FileVideo,
-  mov: FileVideo,
-};
+type IconComponent = React.ComponentType<{ className?: string }>
 
-function getFileIcon(name: string, type: "blob" | "tree") {
-  if (type === "tree") return Folder;
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  return FILE_ICONS[ext] || File;
+const CODE_EXTS = [
+  "ts", "tsx", "js", "jsx", "py", "rb", "go", "rs", "java",
+  "c", "cpp", "h", "hpp", "cs", "php", "sh",
+]
+const FILE_ICONS: Record<string, IconComponent> = {
+  ...Object.fromEntries(CODE_EXTS.map((ext) => [ext, RiFileCodeLine])),
+  md: RiFileTextLine,
+  txt: RiFileTextLine,
+  json: RiBracesLine,
+  yaml: RiBracesLine,
+  yml: RiBracesLine,
+  toml: RiBracesLine,
+  png: RiFileImageLine,
+  jpg: RiFileImageLine,
+  jpeg: RiFileImageLine,
+  gif: RiFileImageLine,
+  svg: RiFileImageLine,
+  webp: RiFileImageLine,
+  mp3: RiFileMusicLine,
+  wav: RiFileMusicLine,
+  mp4: RiFileVideoLine,
+  mov: RiFileVideoLine,
+}
+
+function getFileIcon(name: string, type: "blob" | "tree"): IconComponent {
+  if (type === "tree") return RiFolder3Fill
+  const ext = name.split(".").pop()?.toLowerCase() || ""
+  return FILE_ICONS[ext] || RiFile3Line
 }
 
 function truncateMessage(message: string, maxLength = 50): string {
-  if (message.length <= maxLength) return message;
-  return message.slice(0, maxLength).trim() + "...";
+  if (message.length <= maxLength) return message
+  return message.slice(0, maxLength).trim() + "..."
 }
 
-export function FileTree({ files, username, repoName, branch, _basePath, commits, isLoadingCommits }: FileTreeProps) {
-  const folders: FileEntry[] = [];
-  const fileItems: FileEntry[] = [];
+export function FileTree({
+  files,
+  username,
+  repoName,
+  branch,
+  commits,
+  isLoadingCommits,
+}: FileTreeProps) {
+  const folders: FileEntry[] = []
+  const fileItems: FileEntry[] = []
   for (const f of files) {
-    if (f.type === "tree") folders.push(f);
-    else fileItems.push(f);
+    if (f.type === "tree") folders.push(f)
+    else fileItems.push(f)
   }
   const sortedFiles = [
     ...folders.toSorted((a, b) => a.name.localeCompare(b.name)),
     ...fileItems.toSorted((a, b) => a.name.localeCompare(b.name)),
-  ];
+  ]
 
-  const commitsByPath = commits?.reduce((acc, commit) => {
-    acc[commit.path] = commit;
-    return acc;
-  }, {} as Record<string, FileLastCommit>) ?? {};
+  const commitsByPath =
+    commits?.reduce(
+      (acc, commit) => {
+        acc[commit.path] = commit
+        return acc
+      },
+      {} as Record<string, FileLastCommit>,
+    ) ?? {}
+
+  const encodedBranch = encodeURIComponent(branch)
 
   return (
-    <div className="divide-y divide-border">
+    <div className="divide-y">
       {sortedFiles.map((file) => {
-        const Icon = getFileIcon(file.name, file.type);
-        const route = file.type === "tree" ? ("/$username/$repo/tree/$" as const) : ("/$username/$repo/blob/$" as const);
-        const splat = `${branch}/${file.path}`;
-        const commit = commitsByPath[file.path];
+        const Icon = getFileIcon(file.name, file.type)
+        const section = file.type === "tree" ? "tree" : "blob"
+        const href = `/${username}/${repoName}/${section}/${encodedBranch}/${file.path
+          .split("/")
+          .map(encodeURIComponent)
+          .join("/")}`
+        const commit = commitsByPath[file.path]
 
         return (
           <Link
             key={file.oid + file.name}
-            to={route}
-            params={{ username, repo: repoName, _splat: splat }}
-            className="flex items-center gap-3 px-5 py-2.5 hover:bg-secondary/50 transition-colors group"
+            href={href}
+            className="group flex items-center gap-3 px-5 py-2.5 transition-colors duration-100 hover:bg-muted/50 motion-reduce:transition-none"
           >
-            <Icon className={cn("h-4 w-4 shrink-0 text-muted-foreground")} />
-            <span className={cn("text-sm min-w-0 truncate", "w-[180px] sm:w-[200px] shrink-0")}>{file.name}</span>
+            <Icon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="w-[180px] min-w-0 shrink-0 truncate text-sm sm:w-[200px]">
+              {file.name}
+            </span>
 
-            <div className="hidden md:flex flex-1 items-center gap-3 min-w-0">
+            <div className="hidden min-w-0 flex-1 items-center gap-3 md:flex">
               {isLoadingCommits ? (
-                <div className="h-4 w-48 bg-secondary/50 animate-pulse" />
+                <Skeleton className="h-4 w-48" />
               ) : commit?.message ? (
-                <span className="text-sm text-muted-foreground truncate">
+                <span className="truncate text-sm text-muted-foreground">
                   {truncateMessage(commit.message)}
                 </span>
               ) : null}
             </div>
 
-            <div className="hidden sm:block shrink-0 text-right">
+            <div className="hidden shrink-0 text-right sm:block">
               {isLoadingCommits ? (
-                <div className="h-4 w-16 bg-secondary/50 animate-pulse ml-auto" />
+                <Skeleton className="ml-auto h-4 w-16" />
               ) : commit?.timestamp ? (
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                <span className="text-xs whitespace-nowrap text-muted-foreground">
                   {timeAgo(commit.timestamp)}
                 </span>
               ) : null}
             </div>
           </Link>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

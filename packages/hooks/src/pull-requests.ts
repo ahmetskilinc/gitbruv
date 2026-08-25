@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "./context";
-import type { PRFilters } from "./types";
+import type { InlineCommentData, PRFilters } from "./types";
 
 export function usePullRequests(owner: string, repo: string, filters?: PRFilters) {
   const api = useApi();
@@ -163,7 +163,7 @@ export function useCreatePRComment(prId: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: string | { body: string; filePath?: string; side?: "left" | "right"; lineNumber?: number; commitOid?: string; replyToId?: string }) =>
+    mutationFn: (data: string | InlineCommentData) =>
       api.pullRequests.createComment(prId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pullRequest", prId, "comments"] });

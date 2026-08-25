@@ -35,3 +35,20 @@ export function validatePassword(password: string): ValidationResult {
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+/**
+ * Parse a pagination `limit` query value, coercing invalid/NaN input to the
+ * default and clamping to a safe range so an unbounded value can't drive a huge
+ * query or history walk.
+ */
+export function parseLimit(value: string | undefined, fallback = 30, max = 100): number {
+  const parsed = parseInt(value ?? "", 10);
+  const n = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.min(Math.max(n, 1), max);
+}
+
+/** Parse a pagination `offset`/`skip` value, coercing invalid input to 0. */
+export function parseOffset(value: string | undefined): number {
+  const parsed = parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}

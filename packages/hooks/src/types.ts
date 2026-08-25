@@ -501,6 +501,54 @@ export type ApiClient = {
     reorderItems: (items: { id: string; columnId: string; position: number }[]) => Promise<{ success: boolean }>;
     deleteItem: (itemId: string) => Promise<{ success: boolean }>;
   };
+  milestones: {
+    list: (owner: string, repo: string, state?: "open" | "closed") => Promise<{ milestones: Milestone[] }>;
+    create: (owner: string, repo: string, data: { title: string; description?: string; dueOn?: string }) => Promise<Milestone>;
+    update: (id: string, data: { title?: string; description?: string; state?: string; dueOn?: string | null }) => Promise<{ success: boolean }>;
+    delete: (id: string) => Promise<{ success: boolean }>;
+  };
+  releases: {
+    list: (owner: string, repo: string) => Promise<{ releases: Release[] }>;
+    get: (owner: string, repo: string, tag: string) => Promise<Release>;
+    create: (
+      owner: string,
+      repo: string,
+      data: { tagName: string; targetCommitish?: string; name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }
+    ) => Promise<Release>;
+    update: (id: string, data: { name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }) => Promise<{ success: boolean }>;
+    delete: (id: string) => Promise<{ success: boolean }>;
+  };
+};
+
+export type Milestone = {
+  id: string;
+  number: number;
+  repositoryId: string;
+  title: string;
+  description: string | null;
+  state: "open" | "closed";
+  dueOn: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  openIssues: number;
+  closedIssues: number;
+};
+
+export type Release = {
+  id: string;
+  repositoryId: string;
+  tagName: string;
+  targetCommitish: string;
+  commitOid: string | null;
+  name: string | null;
+  body: string | null;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  authorId: string;
+  createdAt: string;
+  publishedAt: string | null;
+  author?: { id: string; username: string; name: string; avatarUrl: string | null } | null;
 };
 
 export type SearchResultType = "repository" | "issue" | "pull_request" | "user";

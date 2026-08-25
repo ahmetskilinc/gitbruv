@@ -1,53 +1,63 @@
-"use client";
+"use client"
 
-import { useTheme } from "tanstack-theme-kit";
-import { useCallback, useRef, useState } from "react";
-import { PatchDiff } from "@pierre/diffs/react";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { useCallback, useRef, useState } from "react"
+import { useTheme } from "next-themes"
+import { PatchDiff } from "@pierre/diffs/react"
 import {
-  Add01Icon,
-  ArrowDown01Icon,
-  ArrowExpandIcon,
-  ArrowShrinkIcon,
-  ArrowUp01Icon,
-  File01Icon,
-  FileAddIcon,
-  FileEditIcon,
-  FileRemoveIcon,
-  FileSyncIcon,
-  Remove01Icon,
-} from "@hugeicons-pro/core-stroke-standard";
+  RiAddLine,
+  RiArrowDownSLine,
+  RiArrowRightSLine,
+  RiCollapseDiagonalLine,
+  RiExpandDiagonalLine,
+  RiFileAddLine,
+  RiFileEditLine,
+  RiFileLine,
+  RiFileReduceLine,
+  RiFileTransferLine,
+  RiSubtractLine,
+} from "@remixicon/react"
 
-import type { FileDiff } from "@gitbruv/hooks";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import type { FileDiff } from "@gitbruv/hooks"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+
+// Domain colors for git states — raw palette on purpose; the preset theme
+// carries no diff semantics.
+export const DIFF_ADD_TEXT = "text-emerald-500"
+export const DIFF_REMOVE_TEXT = "text-red-500"
+const statusColors: Record<string, string> = {
+  added: DIFF_ADD_TEXT,
+  modified: "text-amber-500",
+  deleted: DIFF_REMOVE_TEXT,
+  renamed: "text-primary",
+}
 
 function fileDiffToUnifiedDiff(file: FileDiff): string {
-  const lines: string[] = [];
+  const lines: string[] = []
 
-  const isNewFile = file.status === "added";
-  const isDeletedFile = file.status === "deleted";
-  const oldPath = file.oldPath || file.path;
-  const newPath = file.path;
+  const isNewFile = file.status === "added"
+  const isDeletedFile = file.status === "deleted"
+  const oldPath = file.oldPath || file.path
+  const newPath = file.path
 
-  lines.push(isNewFile ? "--- /dev/null" : `--- a/${oldPath}`);
-  lines.push(isDeletedFile ? "+++ /dev/null" : `+++ b/${newPath}`);
+  lines.push(isNewFile ? "--- /dev/null" : `--- a/${oldPath}`)
+  lines.push(isDeletedFile ? "+++ /dev/null" : `+++ b/${newPath}`)
 
   for (const hunk of file.hunks) {
-    const oldStart = isNewFile ? 0 : hunk.oldStart;
-    const newStart = isDeletedFile ? 0 : hunk.newStart;
-    lines.push(`@@ -${oldStart},${hunk.oldLines} +${newStart},${hunk.newLines} @@`);
+    const oldStart = isNewFile ? 0 : hunk.oldStart
+    const newStart = isDeletedFile ? 0 : hunk.newStart
+    lines.push(`@@ -${oldStart},${hunk.oldLines} +${newStart},${hunk.newLines} @@`)
 
     for (const line of hunk.lines) {
-      const prefix = line.type === "addition" ? "+" : line.type === "deletion" ? "-" : " ";
-      lines.push(prefix + line.content);
+      const prefix = line.type === "addition" ? "+" : line.type === "deletion" ? "-" : " "
+      lines.push(prefix + line.content)
     }
   }
 
-  return lines.join("\n");
+  return lines.join("\n")
 }
 
-export type DiffViewMode = "unified" | "split";
+export type DiffViewMode = "unified" | "split"
 
 export function DiffToolbar({
   stats,
@@ -58,67 +68,63 @@ export function DiffToolbar({
   showSidebar,
   onShowSidebarChange,
 }: {
-  stats: { additions: number; deletions: number; filesChanged: number };
-  viewMode: DiffViewMode;
-  onViewModeChange: (mode: DiffViewMode) => void;
-  fullWidth: boolean;
-  onFullWidthChange: (fullWidth: boolean) => void;
-  showSidebar?: boolean;
-  onShowSidebarChange?: (show: boolean) => void;
+  stats: { additions: number; deletions: number; filesChanged: number }
+  viewMode: DiffViewMode
+  onViewModeChange: (mode: DiffViewMode) => void
+  fullWidth: boolean
+  onFullWidthChange: (fullWidth: boolean) => void
+  showSidebar?: boolean
+  onShowSidebarChange?: (show: boolean) => void
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
         {onShowSidebarChange && (
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             onClick={() => onShowSidebarChange(!showSidebar)}
             title={showSidebar ? "Hide file tree" : "Show file tree"}
           >
-            <HugeiconsIcon
-              icon={File01Icon}
-              strokeWidth={2}
-              className={cn("size-4", showSidebar && "text-primary")}
-            />
+            <RiFileLine className={cn("size-4", showSidebar && "text-primary")} />
           </Button>
         )}
         <DiffStats stats={stats} />
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex border border-border">
+        <div className="flex overflow-hidden rounded-lg border">
           <Button
             variant={viewMode === "unified" ? "secondary" : "ghost"}
-            size="xs"
+            size="sm"
             onClick={() => onViewModeChange("unified")}
-            className="border-0"
+            className="rounded-none border-0"
           >
             Unified
           </Button>
           <Button
             variant={viewMode === "split" ? "secondary" : "ghost"}
-            size="xs"
+            size="sm"
             onClick={() => onViewModeChange("split")}
-            className="border-0 border-l border-border"
+            className="rounded-none border-0 border-l"
           >
             Split
           </Button>
         </div>
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           onClick={() => onFullWidthChange(!fullWidth)}
           title={fullWidth ? "Exit full width" : "Full width"}
         >
-          <HugeiconsIcon
-            icon={fullWidth ? ArrowShrinkIcon : ArrowExpandIcon}
-            strokeWidth={2}
-            className="size-4"
-          />
+          {fullWidth ? (
+            <RiCollapseDiagonalLine className="size-4" />
+          ) : (
+            <RiExpandDiagonalLine className="size-4" />
+          )}
         </Button>
       </div>
     </div>
-  );
+  )
 }
 
 function FileHeader({
@@ -126,71 +132,68 @@ function FileHeader({
   isExpanded,
   onToggle,
 }: {
-  file: FileDiff;
-  isExpanded: boolean;
-  onToggle: () => void;
+  file: FileDiff
+  isExpanded: boolean
+  onToggle: () => void
 }) {
-  const statusColors: Record<string, string> = {
-    added: "text-green-600 dark:text-green-400",
-    modified: "text-yellow-600 dark:text-yellow-400",
-    deleted: "text-red-600 dark:text-red-400",
-    renamed: "text-blue-600 dark:text-blue-400",
-  };
-
   const statusLabels: Record<string, string> = {
     added: "Added",
     modified: "Modified",
     deleted: "Deleted",
     renamed: "Renamed",
-  };
+  }
 
   return (
     <button
       onClick={onToggle}
-      className="flex items-center justify-between w-full px-4 py-2 bg-muted/50 hover:bg-muted/80 transition-colors text-left"
+      className="flex w-full items-center justify-between bg-muted/50 px-4 py-2 text-left transition-colors duration-100 hover:bg-muted/80 motion-reduce:transition-none"
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <HugeiconsIcon
-          icon={isExpanded ? ArrowDown01Icon : ArrowUp01Icon}
-          strokeWidth={2}
-          className="size-4 shrink-0 text-muted-foreground"
-        />
-        <HugeiconsIcon icon={File01Icon} strokeWidth={2} className="size-4 shrink-0 text-muted-foreground" />
-        <span className="font-mono text-sm truncate">{file.path}</span>
-        <span className={cn("text-xs font-medium shrink-0", statusColors[file.status])}>
+      <div className="flex min-w-0 items-center gap-3">
+        {isExpanded ? (
+          <RiArrowDownSLine className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <RiArrowRightSLine className="size-4 shrink-0 text-muted-foreground" />
+        )}
+        <RiFileLine className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate font-mono text-sm">{file.path}</span>
+        <span className={cn("shrink-0 text-xs font-medium", statusColors[file.status])}>
           {statusLabels[file.status]}
         </span>
       </div>
-      <div className="flex items-center gap-3 shrink-0 ml-4">
+      <div className="ml-4 flex shrink-0 items-center gap-3">
         {file.additions > 0 && (
-          <span className="flex items-center gap-1 text-green-600 dark:text-green-400 text-sm font-mono">
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3" />
+          <span className={cn("flex items-center gap-1 font-mono text-sm", DIFF_ADD_TEXT)}>
+            <RiAddLine className="size-3" />
             {file.additions}
           </span>
         )}
         {file.deletions > 0 && (
-          <span className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm font-mono">
-            <HugeiconsIcon icon={Remove01Icon} strokeWidth={2} className="size-3" />
+          <span className={cn("flex items-center gap-1 font-mono text-sm", DIFF_REMOVE_TEXT)}>
+            <RiSubtractLine className="size-3" />
             {file.deletions}
           </span>
         )}
       </div>
     </button>
-  );
+  )
 }
 
 function FileDiffView({ file, viewMode }: { file: FileDiff; viewMode: DiffViewMode }) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const { theme } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(true)
+  const { resolvedTheme } = useTheme()
 
-  const patchContent = fileDiffToUnifiedDiff(file);
+  const patchContent = fileDiffToUnifiedDiff(file)
 
   return (
-    <div className="border border-border overflow-hidden">
-      <FileHeader file={file} isExpanded={isExpanded} onToggle={() => setIsExpanded((prev) => !prev)} />
-      {isExpanded && (
-        file.hunks.length === 0 ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+    <div className="overflow-hidden rounded-lg border">
+      <FileHeader
+        file={file}
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
+      {isExpanded &&
+        (file.hunks.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">
             No changes to display (binary file or empty diff)
           </div>
         ) : (
@@ -199,14 +202,12 @@ function FileDiffView({ file, viewMode }: { file: FileDiff; viewMode: DiffViewMo
             options={{
               disableFileHeader: true,
               diffStyle: viewMode === "unified" ? "unified" : "split",
-              // theme: { dark: "one-dark-pro", light: "one-light" },
-              themeType: theme
+              themeType: resolvedTheme === "light" ? "light" : "dark",
             }}
           />
-        )
-      )}
+        ))}
     </div>
-  );
+  )
 }
 
 export function DiffViewer({
@@ -214,26 +215,27 @@ export function DiffViewer({
   viewMode,
   fileRefs,
 }: {
-  files: FileDiff[];
-  viewMode: DiffViewMode;
-  fileRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  files: FileDiff[]
+  viewMode: DiffViewMode
+  fileRefs?: React.RefObject<Map<string, HTMLDivElement>>
 }) {
   if (files.length === 0) {
     return (
-      <div className="border border-border p-8 text-center text-muted-foreground">
+      <div className="rounded-lg border p-8 text-center text-muted-foreground">
         No files changed in this commit
       </div>
-    );
+    )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {files.map((file, idx) => (
         <div
           key={file.path + idx}
+          className="scroll-mt-4"
           ref={(el) => {
             if (el && fileRefs) {
-              fileRefs.current.set(file.path, el);
+              fileRefs.current.set(file.path, el)
             }
           }}
         >
@@ -241,111 +243,97 @@ export function DiffViewer({
         </div>
       ))}
     </div>
-  );
+  )
 }
 
-const statusIcons: Record<string, typeof File01Icon> = {
-  added: FileAddIcon,
-  modified: FileEditIcon,
-  deleted: FileRemoveIcon,
-  renamed: FileSyncIcon,
-};
-
-const statusColors: Record<string, string> = {
-  added: "text-green-600 dark:text-green-400",
-  modified: "text-yellow-600 dark:text-yellow-400",
-  deleted: "text-red-600 dark:text-red-400",
-  renamed: "text-blue-600 dark:text-blue-400",
-};
+const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  added: RiFileAddLine,
+  modified: RiFileEditLine,
+  deleted: RiFileReduceLine,
+  renamed: RiFileTransferLine,
+}
 
 export function FilePickerSidebar({
   files,
   selectedFile,
   onFileSelect,
 }: {
-  files: FileDiff[];
-  selectedFile: string | null;
-  onFileSelect: (path: string) => void;
+  files: FileDiff[]
+  selectedFile: string | null
+  onFileSelect: (path: string) => void
 }) {
-  const getFileName = (path: string) => path.split("/").pop() || path;
+  const getFileName = (path: string) => path.split("/").pop() || path
   const getDirectory = (path: string) => {
-    const parts = path.split("/");
-    return parts.length > 1 ? parts.slice(0, -1).join("/") : "";
-  };
+    const parts = path.split("/")
+    return parts.length > 1 ? parts.slice(0, -1).join("/") : ""
+  }
 
   return (
-    <div className="border border-border bg-card overflow-hidden flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-border bg-muted/50">
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">
+      <div className="border-b bg-muted/50 px-3 py-2">
         <span className="text-sm font-medium">{files.length} files</span>
       </div>
-      <div className="overflow-y-auto flex-1">
+      <div className="flex-1 overflow-y-auto">
         {files.map((file) => {
-          const Icon = statusIcons[file.status];
-          const directory = getDirectory(file.path);
-          const fileName = getFileName(file.path);
-          const isSelected = selectedFile === file.path;
+          const Icon = statusIcons[file.status]
+          const directory = getDirectory(file.path)
+          const fileName = getFileName(file.path)
+          const isSelected = selectedFile === file.path
 
           return (
             <button
               key={file.path}
               onClick={() => onFileSelect(file.path)}
               className={cn(
-                "w-full text-left px-3 py-2 hover:bg-muted/80 transition-colors border-b border-border/50 last:border-b-0",
-                isSelected && "bg-muted"
+                "w-full border-b border-border/50 px-3 py-2 text-left transition-colors duration-100 last:border-b-0 hover:bg-muted/80 motion-reduce:transition-none",
+                isSelected && "bg-muted",
               )}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <HugeiconsIcon
-                  icon={Icon}
-                  strokeWidth={2}
-                  className={cn("size-4 shrink-0", statusColors[file.status])}
-                />
+              <div className="flex min-w-0 items-center gap-2">
+                <Icon className={cn("size-4 shrink-0", statusColors[file.status])} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{fileName}</div>
+                  <div className="truncate text-sm font-medium">{fileName}</div>
                   {directory && (
-                    <div className="text-xs text-muted-foreground truncate">{directory}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {directory}
+                    </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0 text-xs font-mono">
+                <div className="flex shrink-0 items-center gap-1 font-mono text-xs">
                   {file.additions > 0 && (
-                    <span className="text-green-600 dark:text-green-400">+{file.additions}</span>
+                    <span className={DIFF_ADD_TEXT}>+{file.additions}</span>
                   )}
                   {file.deletions > 0 && (
-                    <span className="text-red-600 dark:text-red-400">-{file.deletions}</span>
+                    <span className={DIFF_REMOVE_TEXT}>-{file.deletions}</span>
                   )}
                 </div>
               </div>
             </button>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
-const HEADER_HEIGHT = 56;
-
 export function useFileNavigation() {
-  const fileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const fileRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
 
+  // The app body scrolls in an inner container (not window), so navigate via
+  // scrollIntoView + scroll-mt-* on the targets instead of window.scrollTo.
   const scrollToFile = useCallback((path: string) => {
-    setSelectedFile(path);
-    const element = fileRefs.current.get(path);
-    if (element) {
-      const elementPosition = element.getBoundingClientRect().top + window.scrollY;
-      const offsetPosition = elementPosition - HEADER_HEIGHT - 16;
-      window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-    }
-  }, []);
+    setSelectedFile(path)
+    fileRefs.current.get(path)?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [])
 
-  return { fileRefs, selectedFile, scrollToFile };
+  return { fileRefs, selectedFile, scrollToFile }
 }
 
 export function DiffStats({
   stats,
 }: {
-  stats: { additions: number; deletions: number; filesChanged: number };
+  stats: { additions: number; deletions: number; filesChanged: number }
 }) {
   return (
     <div className="flex items-center gap-4 text-sm">
@@ -353,17 +341,17 @@ export function DiffStats({
         {stats.filesChanged} file{stats.filesChanged !== 1 ? "s" : ""} changed
       </span>
       {stats.additions > 0 && (
-        <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-mono">
-          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-3" />
+        <span className={cn("flex items-center gap-1 font-mono", DIFF_ADD_TEXT)}>
+          <RiAddLine className="size-3" />
           {stats.additions} addition{stats.additions !== 1 ? "s" : ""}
         </span>
       )}
       {stats.deletions > 0 && (
-        <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-mono">
-          <HugeiconsIcon icon={Remove01Icon} strokeWidth={2} className="size-3" />
+        <span className={cn("flex items-center gap-1 font-mono", DIFF_REMOVE_TEXT)}>
+          <RiSubtractLine className="size-3" />
           {stats.deletions} deletion{stats.deletions !== 1 ? "s" : ""}
         </span>
       )}
     </div>
-  );
+  )
 }

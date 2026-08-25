@@ -1,30 +1,52 @@
-import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { timeAgo } from "@gitbruv/lib";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Edit02Icon, Delete02Icon, LockIcon, UserUnlockIcon } from "@hugeicons-pro/core-stroke-standard";
-import type { Issue, Label, IssueAuthor } from "@gitbruv/hooks";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { CodeViewer } from "@/components/code-viewer";
-import { ReactionPicker } from "./reaction-picker";
-import { LabelPicker } from "./label-picker";
-import { AssigneePicker } from "./assignee-picker";
-import { IssueForm } from "./issue-form";
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import {
+  RiCheckboxCircleLine,
+  RiDeleteBinLine,
+  RiLockLine,
+  RiLockUnlockLine,
+  RiPencilLine,
+  RiRecordCircleLine,
+} from "@remixicon/react"
+import { timeAgo } from "@gitbruv/lib"
+import type { Issue, IssueAuthor, Label } from "@gitbruv/hooks"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { MarkdownBody } from "./markdown-body"
+import { ReactionPicker } from "./reaction-picker"
+import { LabelPicker, AssigneePicker } from "./pickers"
+import { IssueForm } from "./issue-form"
 
 interface IssueDetailProps {
-  issue: Issue;
-  labels: Label[];
-  availableAssignees: IssueAuthor[];
-  currentUserId?: string;
-  isOwner: boolean;
-  onToggleReaction: (emoji: string) => void;
-  onUpdate: (data: { title?: string; body?: string; state?: "open" | "closed"; locked?: boolean }) => Promise<void>;
-  onDelete: () => Promise<void>;
-  onAddLabel: (labelId: string) => void;
-  onRemoveLabel: (labelId: string) => void;
-  onAddAssignee: (userId: string) => void;
-  onRemoveAssignee: (userId: string) => void;
+  issue: Issue
+  labels: Label[]
+  availableAssignees: IssueAuthor[]
+  currentUserId?: string
+  isOwner: boolean
+  onToggleReaction: (emoji: string) => void
+  onUpdate: (data: {
+    title?: string
+    body?: string
+    state?: "open" | "closed"
+    locked?: boolean
+  }) => Promise<void>
+  onDelete: () => Promise<void>
+  onAddLabel: (labelId: string) => void
+  onRemoveLabel: (labelId: string) => void
+  onAddAssignee: (userId: string) => void
+  onRemoveAssignee: (userId: string) => void
 }
 
 export function IssueDetail({
@@ -41,71 +63,71 @@ export function IssueDetail({
   onAddAssignee,
   onRemoveAssignee,
 }: IssueDetailProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const canEdit = currentUserId === issue.author.id || isOwner;
-  const canDelete = isOwner;
+  const canEdit = currentUserId === issue.author.id || isOwner
+  const canDelete = isOwner
 
   const handleUpdate = async (data: { title: string; body: string }) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onUpdate({ title: data.title, body: data.body });
-      setIsEditing(false);
+      await onUpdate({ title: data.title, body: data.body })
+      setIsEditing(false)
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleToggleState = async () => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onUpdate({ state: issue.state === "open" ? "closed" : "open" });
+      await onUpdate({ state: issue.state === "open" ? "closed" : "open" })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleToggleLock = async () => {
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onUpdate({ locked: !issue.locked });
+      await onUpdate({ locked: !issue.locked })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this issue?")) return;
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      await onDelete();
+      await onDelete()
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   const handleToggleLabel = (labelId: string) => {
-    const isSelected = issue.labels.some((l) => l.id === labelId);
+    const isSelected = issue.labels.some((l) => l.id === labelId)
     if (isSelected) {
-      onRemoveLabel(labelId);
+      onRemoveLabel(labelId)
     } else {
-      onAddLabel(labelId);
+      onAddLabel(labelId)
     }
-  };
+  }
 
   const handleToggleAssignee = (userId: string) => {
-    const isSelected = issue.assignees.some((a) => a.id === userId);
+    const isSelected = issue.assignees.some((a) => a.id === userId)
     if (isSelected) {
-      onRemoveAssignee(userId);
+      onRemoveAssignee(userId)
     } else {
-      onAddAssignee(userId);
+      onAddAssignee(userId)
     }
-  };
+  }
 
   if (isEditing) {
     return (
-      <div className="border border-border bg-card p-6">
+      <div className="rounded-lg border border-border p-6">
         <IssueForm
           initialTitle={issue.title}
           initialBody={issue.body || ""}
@@ -115,23 +137,22 @@ export function IssueDetail({
           isSubmitting={isSubmitting}
         />
       </div>
-    );
+    )
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <div className="lg:col-span-3 space-y-4">
-        <div className="border border-border bg-card">
-          <div className="flex items-start justify-between px-4 py-3 bg-secondary/30 border-b border-border">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+      <div className="flex flex-col gap-4 lg:col-span-3">
+        <div className="rounded-lg border border-border">
+          <div className="flex items-start justify-between border-b border-border bg-muted/30 px-4 py-3">
             <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6">
+              <Avatar className="size-6">
                 <AvatarImage src={issue.author.avatarUrl || undefined} />
                 <AvatarFallback className="text-xs">{issue.author.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <Link
-                to="/$username"
-                params={{ username: issue.author.username }}
-                className="text-sm font-medium hover:text-primary transition-colors"
+                href={`/${issue.author.username}`}
+                className="text-sm font-medium transition-colors duration-100 hover:text-primary motion-reduce:transition-none"
               >
                 {issue.author.username}
               </Link>
@@ -142,18 +163,24 @@ export function IssueDetail({
 
             {canEdit && (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setIsEditing(true)}>
-                  <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} className="size-4" />
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit issue"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <RiPencilLine className="size-4" />
                 </Button>
                 {canDelete && (
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-red-500 hover:text-red-600"
-                    onClick={handleDelete}
+                    size="icon-sm"
+                    aria-label="Delete issue"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setIsDeleteDialogOpen(true)}
                     disabled={isSubmitting}
                   >
-                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
+                    <RiDeleteBinLine className="size-4" />
                   </Button>
                 )}
               </div>
@@ -162,7 +189,7 @@ export function IssueDetail({
 
           <div className="p-4">
             {issue.body ? (
-              <CodeViewer content={issue.body} language="markdown" className="p-0 md:p-0" />
+              <MarkdownBody>{issue.body}</MarkdownBody>
             ) : (
               <p className="text-muted-foreground italic">No description provided.</p>
             )}
@@ -178,9 +205,9 @@ export function IssueDetail({
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="flex flex-col gap-6">
         {canEdit && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -188,6 +215,11 @@ export function IssueDetail({
               onClick={handleToggleState}
               disabled={isSubmitting}
             >
+              {issue.state === "open" ? (
+                <RiCheckboxCircleLine className="size-4" />
+              ) : (
+                <RiRecordCircleLine className="size-4" />
+              )}
               {issue.state === "open" ? "Close issue" : "Reopen issue"}
             </Button>
             {isOwner && (
@@ -198,11 +230,11 @@ export function IssueDetail({
                 onClick={handleToggleLock}
                 disabled={isSubmitting}
               >
-                <HugeiconsIcon
-                  icon={issue.locked ? UserUnlockIcon : LockIcon}
-                  strokeWidth={2}
-                  className="size-4 mr-2"
-                />
+                {issue.locked ? (
+                  <RiLockUnlockLine className="size-4" />
+                ) : (
+                  <RiLockLine className="size-4" />
+                )}
                 {issue.locked ? "Unlock conversation" : "Lock conversation"}
               </Button>
             )}
@@ -230,15 +262,16 @@ export function IssueDetail({
         {issue.state === "closed" && issue.closedBy && (
           <div className="border-t border-border pt-4">
             <span className="text-sm font-medium text-muted-foreground">Closed by</span>
-            <div className="flex items-center gap-2 mt-2">
-              <Avatar className="h-5 w-5">
+            <div className="mt-2 flex items-center gap-2">
+              <Avatar className="size-5">
                 <AvatarImage src={issue.closedBy.avatarUrl || undefined} />
-                <AvatarFallback className="text-[10px]">{issue.closedBy.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-[10px]">
+                  {issue.closedBy.name.charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <Link
-                to="/$username"
-                params={{ username: issue.closedBy.username }}
-                className="text-sm hover:text-primary transition-colors"
+                href={`/${issue.closedBy.username}`}
+                className="text-sm transition-colors duration-100 hover:text-primary motion-reduce:transition-none"
               >
                 {issue.closedBy.username}
               </Link>
@@ -246,6 +279,27 @@ export function IssueDetail({
           </div>
         )}
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this issue?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the issue and all of its comments. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete issue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
+  )
 }

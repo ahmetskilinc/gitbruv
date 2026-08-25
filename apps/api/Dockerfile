@@ -1,4 +1,4 @@
-FROM oven/bun:1.1 AS builder
+FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY packages/lib/package.json ./packages/lib/
 COPY packages/hooks/package.json ./packages/hooks/
 COPY packages/eslint-config/package.json ./packages/eslint-config/
 
-RUN bun install
+RUN bun install --frozen-lockfile
 
 COPY packages/db ./packages/db
 COPY packages/lib ./packages/lib
@@ -25,7 +25,7 @@ RUN bun build src/index.ts --outdir dist --target bun --minify \
     --external @tanstack/react-query --external @pierre/diffs \
     --external @base-ui/react --external @base-ui/utils --external shiki
 
-FROM oven/bun:1.1-alpine AS runner
+FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 

@@ -9,9 +9,12 @@ import {
   issueAssignees,
   issueComments,
   issueReactions,
+  milestones,
 } from "@gitbruv/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
+import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
+import { notifyResource, resolveMentions } from "./notifications";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -41,6 +44,30 @@ async function getRepoAndCheckAccess(owner: string, name: string, userId?: strin
   }
 
   return { repoId: row.id, ownerId: row.ownerId };
+}
+
+// Enforce read access to the repo that owns an issue (private repos are only
+// visible to their owner). Returns the repo row, or null if not found /
+// not permitted. Callers should 404 on null to avoid leaking existence.
+async function getIssueRepoAccess(repositoryId: string, userId?: string) {
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, repositoryId),
+    columns: { id: true, ownerId: true, visibility: true },
+  });
+  if (!repo) return null;
+  if (repo.visibility === "private" && userId !== repo.ownerId) return null;
+  return repo;
+}
+
+// Resolve the owner username + repo name for building notification links.
+async function getRepoContext(repositoryId: string): Promise<{ ownerUsername: string; name: string } | null> {
+  const [row] = await db
+    .select({ ownerUsername: users.username, name: repositories.name })
+    .from(repositories)
+    .innerJoin(users, eq(users.id, repositories.ownerId))
+    .where(eq(repositories.id, repositoryId))
+    .limit(1);
+  return row ?? null;
 }
 
 async function getIssueLabels(issueId: string) {
@@ -133,8 +160,8 @@ app.get("/api/repositories/:owner/:name/issues", async (c) => {
   const currentUser = c.get("user");
   const stateParam = c.req.query("state") || "open";
   const state: "open" | "closed" = stateParam === "closed" ? "closed" : "open";
-  const limit = parseInt(c.req.query("limit") || "30", 10);
-  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 30);
+  const offset = parseOffset(c.req.query("offset"));
 
   const repoAccess = await getRepoAndCheckAccess(owner, name, currentUser?.id);
   if (!repoAccess) {
@@ -364,6 +391,7 @@ app.patch("/api/issues/:id", requireAuth, async (c) => {
     body?: string;
     state?: string;
     locked?: boolean;
+    milestoneId?: string | null;
   }>();
 
   const issue = await db.query.issues.findFirst({
@@ -404,8 +432,41 @@ app.patch("/api/issues/:id", requireAuth, async (c) => {
     }
   }
   if (body.locked !== undefined) updates.locked = body.locked;
+  if (body.milestoneId !== undefined) {
+    // Validate the milestone belongs to the same repo (or clear it with null).
+    if (body.milestoneId === null) {
+      updates.milestoneId = null;
+    } else {
+      const ms = await db.query.milestones.findFirst({
+        where: eq(milestones.id, body.milestoneId),
+        columns: { id: true, repositoryId: true },
+      });
+      if (!ms || ms.repositoryId !== issue.repositoryId) {
+        return c.json({ error: "Invalid milestone" }, 400);
+      }
+      updates.milestoneId = body.milestoneId;
+    }
+  }
 
   await db.update(issues).set(updates).where(eq(issues.id, id));
+
+  // Notify the issue author when someone else closes their issue.
+  if (updates.state === "closed" && issue.state === "open" && issue.authorId !== user.id) {
+    const ctx = await getRepoContext(issue.repositoryId);
+    if (ctx) {
+      await notifyResource({
+        recipientIds: [issue.authorId],
+        actorId: user.id,
+        type: "issue_closed",
+        title: `${user.username} closed #${issue.number}: ${issue.title}`,
+        resourceType: "issue",
+        resourceId: issue.id,
+        repoOwner: ctx.ownerUsername,
+        repoName: ctx.name,
+        resourceNumber: issue.number,
+      });
+    }
+  }
 
   return c.json({ success: true });
 });
@@ -637,6 +698,23 @@ app.post("/api/issues/:id/assignees", requireAuth, async (c) => {
     await db.insert(issueAssignees).values({ issueId: id, userId: assigneeId }).onConflictDoNothing();
   }
 
+  // Notify newly-added assignees (other than the person doing the assigning).
+  const ctx = await getRepoContext(issue.repositoryId);
+  if (ctx) {
+    await notifyResource({
+      recipientIds: body.assignees,
+      actorId: user.id,
+      type: "issue_assigned",
+      title: `${user.username} assigned you to #${issue.number}: ${issue.title}`,
+      resourceType: "issue",
+      resourceId: issue.id,
+      repoOwner: ctx.ownerUsername,
+      repoName: ctx.name,
+      resourceNumber: issue.number,
+      sendEmail: true,
+    });
+  }
+
   return c.json({ success: true });
 });
 
@@ -669,6 +747,14 @@ app.delete("/api/issues/:id/assignees/:userId", requireAuth, async (c) => {
 app.get("/api/issues/:id/comments", async (c) => {
   const id = c.req.param("id");
   const currentUser = c.get("user");
+
+  const issue = await db.query.issues.findFirst({
+    where: eq(issues.id, id),
+    columns: { repositoryId: true },
+  });
+  if (!issue || !(await getIssueRepoAccess(issue.repositoryId, currentUser?.id))) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
 
   const comments = await db
     .select({
@@ -722,6 +808,10 @@ app.post("/api/issues/:id/comments", requireAuth, async (c) => {
     return c.json({ error: "Issue not found" }, 404);
   }
 
+  if (!(await getIssueRepoAccess(issue.repositoryId, user.id))) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
   const [inserted] = await db
     .insert(issueComments)
     .values({
@@ -730,6 +820,26 @@ app.post("/api/issues/:id/comments", requireAuth, async (c) => {
       body: body.body,
     })
     .returning();
+
+  // Notify the issue author, its assignees, and anyone @-mentioned.
+  const ctx = await getRepoContext(issue.repositoryId);
+  if (ctx) {
+    const assignees = await getIssueAssignees(issue.id);
+    const mentioned = await resolveMentions(body.body);
+    await notifyResource({
+      recipientIds: [issue.authorId, ...assignees.map((a) => a.id), ...mentioned],
+      actorId: user.id,
+      type: "issue_comment",
+      title: `${user.username} commented on #${issue.number}: ${issue.title}`,
+      body: body.body.slice(0, 200),
+      resourceType: "issue",
+      resourceId: issue.id,
+      repoOwner: ctx.ownerUsername,
+      repoName: ctx.name,
+      resourceNumber: issue.number,
+      sendEmail: true,
+    });
+  }
 
   return c.json({
     id: inserted.id,
@@ -815,6 +925,10 @@ app.post("/api/issues/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Issue not found" }, 404);
   }
 
+  if (!(await getIssueRepoAccess(issue.repositoryId, user.id))) {
+    return c.json({ error: "Issue not found" }, 404);
+  }
+
   const existing = await db.query.issueReactions.findFirst({
     where: and(eq(issueReactions.issueId, id), eq(issueReactions.userId, user.id), eq(issueReactions.emoji, body.emoji)),
   });
@@ -829,7 +943,7 @@ app.post("/api/issues/:id/reactions", requireAuth, async (c) => {
       issueId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });
@@ -851,6 +965,14 @@ app.post("/api/issues/comments/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Comment not found" }, 404);
   }
 
+  const commentIssue = await db.query.issues.findFirst({
+    where: eq(issues.id, comment.issueId),
+    columns: { repositoryId: true },
+  });
+  if (!commentIssue || !(await getIssueRepoAccess(commentIssue.repositoryId, user.id))) {
+    return c.json({ error: "Comment not found" }, 404);
+  }
+
   const existing = await db.query.issueReactions.findFirst({
     where: and(eq(issueReactions.commentId, id), eq(issueReactions.userId, user.id), eq(issueReactions.emoji, body.emoji)),
   });
@@ -865,7 +987,7 @@ app.post("/api/issues/comments/:id/reactions", requireAuth, async (c) => {
       commentId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });

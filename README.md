@@ -116,7 +116,7 @@ BETTER_AUTH_SECRET=your-secret-key-here-at-least-32-characters
 
 S3_ACCESS_KEY_ID=your-s3-access-key-id
 S3_SECRET_ACCESS_KEY=your-s3-secret-access-key
-S3_BUCKET_NAME=gitbruv-repos
+S3_BUCKET=gitbruv-repos
 
 REDIS_URL=redis://localhost:6379
 

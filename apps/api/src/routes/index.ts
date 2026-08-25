@@ -6,6 +6,8 @@ import discussions from './discussions';
 import wellKnown from './well-known';
 import settings from './settings';
 import projects from './projects';
+import milestones from './milestones';
+import releases from './releases';
 import search from './search';
 import issues from './issues';
 import health from './health';
@@ -31,6 +33,8 @@ export function mountRoutes(app: Hono) {
   app.route('/', notifications);
   app.route('/', discussions);
   app.route('/', projects);
+  app.route('/', milestones);
+  app.route('/', releases);
   app.route('/', oauth);
   app.route('/', wellKnown);
 }

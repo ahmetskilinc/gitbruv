@@ -1,29 +1,37 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckmarkCircle02Icon, RecordIcon } from "@hugeicons-pro/core-stroke-standard";
-import { cn } from "@/lib/utils";
+import { RiCheckboxCircleLine, RiRecordCircleLine } from "@remixicon/react"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface StateBadgeProps {
-  state: "open" | "closed";
-  className?: string;
+  state: "open" | "closed"
+  className?: string
 }
 
 export function StateBadge({ state, className }: StateBadgeProps) {
-  const isOpen = state === "open";
+  const isOpen = state === "open"
 
   return (
-    <span
+    <Badge
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium",
-        isOpen ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-        className
+        isOpen ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500",
+        className,
       )}
     >
-      <HugeiconsIcon
-        icon={isOpen ? RecordIcon : CheckmarkCircle02Icon}
-        strokeWidth={2}
-        className="size-3.5"
-      />
+      {isOpen ? <RiRecordCircleLine /> : <RiCheckboxCircleLine />}
       {isOpen ? "Open" : "Closed"}
-    </span>
-  );
+    </Badge>
+  )
+}
+
+/** Bare state glyph for dense list rows. */
+export function StateIcon({ state, className }: StateBadgeProps) {
+  const isOpen = state === "open"
+  const Icon = isOpen ? RiRecordCircleLine : RiCheckboxCircleLine
+
+  return (
+    <Icon
+      aria-label={isOpen ? "Open issue" : "Closed issue"}
+      className={cn("size-4", isOpen ? "text-emerald-500" : "text-red-500", className)}
+    />
+  )
 }

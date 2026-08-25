@@ -8,7 +8,8 @@
     "dev": "bun run --watch --env-file ../../.env src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun --minify --external next-themes --external @databuddy/sdk --external sonner --external @tanstack/react-query --external @pierre/diffs --external @base-ui/react --external @base-ui/utils --external shiki",
     "start": "bun run --env-file ../../.env src/index.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1002.0",
