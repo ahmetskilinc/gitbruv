@@ -1,4 +1,5 @@
 import notifications from './notifications';
+import activity from './activity';
 import pullRequests from './pull-requests';
 import repositories from './repositories';
 import gitProtocol from './git-protocol';
@@ -6,6 +7,8 @@ import discussions from './discussions';
 import wellKnown from './well-known';
 import settings from './settings';
 import projects from './projects';
+import milestones from './milestones';
+import releases from './releases';
 import search from './search';
 import issues from './issues';
 import health from './health';
@@ -29,8 +32,11 @@ export function mountRoutes(app: Hono) {
   app.route('/', settings);
   app.route('/', search);
   app.route('/', notifications);
+  app.route('/', activity);
   app.route('/', discussions);
   app.route('/', projects);
+  app.route('/', milestones);
+  app.route('/', releases);
   app.route('/', oauth);
   app.route('/', wellKnown);
 }

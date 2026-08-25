@@ -15,7 +15,10 @@ import {
 } from "@gitbruv/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
-import { createGitStore, getCommits, getCommitDiff, performMerge, repoCache, resolveRefOid } from "../git";
+import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
+import { createGitStore, getCommits, compareBranches, performMerge, repoCache, resolveRefOid } from "../git";
+import { notifyResource, resolveMentions } from "./notifications";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -46,6 +49,30 @@ async function getRepoAndCheckAccess(owner: string, name: string, userId?: strin
   }
 
   return { repoId: row.id, ownerId: row.ownerId, defaultBranch: row.defaultBranch };
+}
+
+// Resolve the base repo for a PR and enforce read access (private repos are
+// only visible to their owner). Returns the repo row, or null if not
+// found / not permitted. Callers should 404 on null to avoid leaking existence.
+async function getPrRepoAccess(baseRepoId: string, userId?: string) {
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, baseRepoId),
+    columns: { id: true, ownerId: true, visibility: true },
+  });
+  if (!repo) return null;
+  if (repo.visibility === "private" && userId !== repo.ownerId) return null;
+  return repo;
+}
+
+// Resolve the base-repo owner username + repo name for notification links.
+async function getRepoContext(repositoryId: string): Promise<{ ownerUsername: string; name: string } | null> {
+  const [row] = await db
+    .select({ ownerUsername: users.username, name: repositories.name })
+    .from(repositories)
+    .innerJoin(users, eq(users.id, repositories.ownerId))
+    .where(eq(repositories.id, repositoryId))
+    .limit(1);
+  return row ?? null;
 }
 
 async function getPRLabels(prId: string) {
@@ -276,8 +303,8 @@ app.get("/api/repositories/:owner/:name/pulls", async (c) => {
   const name = c.req.param("name");
   const currentUser = c.get("user");
   const stateParam = c.req.query("state") || "open";
-  const limit = parseInt(c.req.query("limit") || "30", 10);
-  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 30);
+  const offset = parseOffset(c.req.query("offset"));
 
   const repoAccess = await getRepoAndCheckAccess(owner, name, currentUser?.id);
   if (!repoAccess) {
@@ -410,6 +437,15 @@ app.post("/api/repositories/:owner/:name/pulls", requireAuth, async (c) => {
       isDraft: body.isDraft ?? false,
     })
     .returning();
+
+  recordActivity({
+    actorId: user.id,
+    repositoryId: inserted.baseRepoId,
+    type: "pr_opened",
+    payload: { number: inserted.number, title: inserted.title },
+    targetType: "pull_request",
+    targetId: inserted.id,
+  });
 
   if (body.labels?.length) {
     for (const labelId of body.labels) {
@@ -612,23 +648,27 @@ app.get("/api/pulls/:id/diff", async (c) => {
   }
 
   const headStore = createGitStore(headRepoOwner.id, headRepo.name);
-  const diff = await getCommitDiff(headStore.fs, headStore.dir, pr.headOid);
+  const baseStore = createGitStore(repo.ownerId, repo.name);
 
-  if (!diff) {
+  // Diff the PR against the merge base with the base branch, not head vs. its
+  // first parent — otherwise a multi-commit PR only shows its last commit.
+  const comparison = await compareBranches(baseStore, pr.baseBranch, headStore, pr.headBranch);
+
+  if (!comparison) {
     return c.json({ error: "Could not compute diff" }, 500);
   }
 
   return c.json({
-    files: diff.files,
-    stats: diff.stats,
+    files: comparison.files,
+    stats: comparison.stats,
   });
 });
 
 app.get("/api/pulls/:id/commits", async (c) => {
   const id = c.req.param("id");
   const currentUser = c.get("user");
-  const limit = parseInt(c.req.query("limit") || "30", 10);
-  const skip = parseInt(c.req.query("skip") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 30);
+  const skip = parseOffset(c.req.query("skip"));
 
   const pr = await db.query.pullRequests.findFirst({
     where: eq(pullRequests.id, id),
@@ -707,7 +747,10 @@ app.post("/api/pulls/:id/merge", requireAuth, async (c) => {
     return c.json({ error: "Base repository not found" }, 404);
   }
 
-  if (user.id !== baseRepo.ownerId && user.id !== pr.authorId) {
+  // Only the base repository owner may merge. The PR author must never be
+  // sufficient: anyone can open a PR against a public repo, so accepting the
+  // author here would let any user merge into someone else's default branch.
+  if (user.id !== baseRepo.ownerId) {
     return c.json({ error: "Not authorized to merge" }, 403);
   }
 
@@ -790,6 +833,10 @@ app.post("/api/pulls/:id/merge", requireAuth, async (c) => {
     return c.json({ error: "Failed to perform merge" }, 500);
   }
 
+  if ("conflict" in mergeResult) {
+    return c.json({ error: mergeResult.reason }, 409);
+  }
+
   await db
     .update(pullRequests)
     .set({
@@ -803,6 +850,32 @@ app.post("/api/pulls/:id/merge", requireAuth, async (c) => {
     .where(eq(pullRequests.id, id));
 
   await repoCache.invalidateBranch(baseRepo.ownerId, baseRepo.name, pr.baseBranch);
+
+  recordActivity({
+    actorId: user.id,
+    repositoryId: pr.baseRepoId,
+    type: "pr_merged",
+    payload: { number: pr.number, title: pr.title },
+    targetType: "pull_request",
+    targetId: pr.id,
+  });
+
+  // Notify the PR author that their pull request was merged.
+  const mergeCtx = await getRepoContext(pr.baseRepoId);
+  if (mergeCtx) {
+    await notifyResource({
+      recipientIds: [pr.authorId],
+      actorId: user.id,
+      type: "pr_merged",
+      title: `${user.username} merged #${pr.number}: ${pr.title}`,
+      resourceType: "pull_request",
+      resourceId: pr.id,
+      repoOwner: mergeCtx.ownerUsername,
+      repoName: mergeCtx.name,
+      resourceNumber: pr.number,
+      sendEmail: true,
+    });
+  }
 
   return c.json({ success: true, mergeCommitOid: mergeResult.mergeCommitOid });
 });
@@ -895,6 +968,11 @@ app.post("/api/pulls/:id/reviews", requireAuth, async (c) => {
     return c.json({ error: "Pull request not found" }, 404);
   }
 
+  const reviewRepo = await getPrRepoAccess(pr.baseRepoId, user.id);
+  if (!reviewRepo) {
+    return c.json({ error: "Pull request not found" }, 404);
+  }
+
   const [inserted] = await db
     .insert(prReviews)
     .values({
@@ -905,6 +983,39 @@ app.post("/api/pulls/:id/reviews", requireAuth, async (c) => {
       commitOid: pr.headOid,
     })
     .returning();
+
+  recordActivity({
+    actorId: user.id,
+    repositoryId: pr.baseRepoId,
+    type: "pr_review",
+    payload: { number: pr.number, title: pr.title, state: body.state },
+    targetType: "pull_request",
+    targetId: pr.id,
+  });
+
+  // Notify the PR author about the review.
+  const reviewCtx = await getRepoContext(pr.baseRepoId);
+  if (reviewCtx) {
+    const stateLabel =
+      body.state === "approved"
+        ? "approved"
+        : body.state === "changes_requested"
+          ? "requested changes on"
+          : "reviewed";
+    await notifyResource({
+      recipientIds: [pr.authorId],
+      actorId: user.id,
+      type: "pr_review",
+      title: `${user.username} ${stateLabel} #${pr.number}: ${pr.title}`,
+      body: body.body?.slice(0, 200),
+      resourceType: "pull_request",
+      resourceId: pr.id,
+      repoOwner: reviewCtx.ownerUsername,
+      repoName: reviewCtx.name,
+      resourceNumber: pr.number,
+      sendEmail: true,
+    });
+  }
 
   return c.json({
     id: inserted.id,
@@ -918,12 +1029,17 @@ app.post("/api/pulls/:id/reviews", requireAuth, async (c) => {
 
 app.get("/api/pulls/:id/reviews", async (c) => {
   const id = c.req.param("id");
+  const currentUser = c.get("user");
 
   const pr = await db.query.pullRequests.findFirst({
     where: eq(pullRequests.id, id),
   });
 
   if (!pr) {
+    return c.json({ error: "Pull request not found" }, 404);
+  }
+
+  if (!(await getPrRepoAccess(pr.baseRepoId, currentUser?.id))) {
     return c.json({ error: "Pull request not found" }, 404);
   }
 
@@ -942,6 +1058,10 @@ app.get("/api/pulls/:id/comments", async (c) => {
   });
 
   if (!pr) {
+    return c.json({ error: "Pull request not found" }, 404);
+  }
+
+  if (!(await getPrRepoAccess(pr.baseRepoId, currentUser?.id))) {
     return c.json({ error: "Pull request not found" }, 404);
   }
 
@@ -1036,6 +1156,10 @@ app.post("/api/pulls/:id/comments", requireAuth, async (c) => {
     return c.json({ error: "Pull request not found" }, 404);
   }
 
+  if (!(await getPrRepoAccess(pr.baseRepoId, user.id))) {
+    return c.json({ error: "Pull request not found" }, 404);
+  }
+
   const isInline = body.filePath && body.lineNumber !== undefined;
   if (isInline && !body.side) {
     return c.json({ error: "Side is required for inline comments" }, 400);
@@ -1063,6 +1187,32 @@ app.post("/api/pulls/:id/comments", requireAuth, async (c) => {
       replyToId: body.replyToId || null,
     })
     .returning();
+
+  // Notify the PR author, requested reviewers, assignees, and @-mentions.
+  const commentCtx = await getRepoContext(pr.baseRepoId);
+  if (commentCtx) {
+    const reviewers = await getPRReviewers(pr.id);
+    const prAssignees = await getPRAssignees(pr.id);
+    const mentioned = await resolveMentions(body.body);
+    await notifyResource({
+      recipientIds: [
+        pr.authorId,
+        ...reviewers.map((r) => r.id),
+        ...prAssignees.map((a) => a.id),
+        ...mentioned,
+      ],
+      actorId: user.id,
+      type: "pr_comment",
+      title: `${user.username} commented on #${pr.number}: ${pr.title}`,
+      body: body.body.slice(0, 200),
+      resourceType: "pull_request",
+      resourceId: pr.id,
+      repoOwner: commentCtx.ownerUsername,
+      repoName: commentCtx.name,
+      resourceNumber: pr.number,
+      sendEmail: true,
+    });
+  }
 
   return c.json({
     id: inserted.id,
@@ -1215,6 +1365,22 @@ app.post("/api/pulls/:id/assignees", requireAuth, async (c) => {
     await db.insert(prAssignees).values({ pullRequestId: id, userId: assigneeId }).onConflictDoNothing();
   }
 
+  const assignCtx = await getRepoContext(pr.baseRepoId);
+  if (assignCtx) {
+    await notifyResource({
+      recipientIds: body.assignees,
+      actorId: user.id,
+      type: "pr_assigned",
+      title: `${user.username} assigned you to #${pr.number}: ${pr.title}`,
+      resourceType: "pull_request",
+      resourceId: pr.id,
+      repoOwner: assignCtx.ownerUsername,
+      repoName: assignCtx.name,
+      resourceNumber: pr.number,
+      sendEmail: true,
+    });
+  }
+
   return c.json({ success: true });
 });
 
@@ -1315,6 +1481,10 @@ app.post("/api/pulls/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Pull request not found" }, 404);
   }
 
+  if (!(await getPrRepoAccess(pr.baseRepoId, user.id))) {
+    return c.json({ error: "Pull request not found" }, 404);
+  }
+
   const existing = await db.query.prReactions.findFirst({
     where: and(eq(prReactions.pullRequestId, id), eq(prReactions.userId, user.id), eq(prReactions.emoji, body.emoji)),
   });
@@ -1329,7 +1499,7 @@ app.post("/api/pulls/:id/reactions", requireAuth, async (c) => {
       pullRequestId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });
@@ -1351,6 +1521,14 @@ app.post("/api/pulls/comments/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Comment not found" }, 404);
   }
 
+  const commentPr = await db.query.pullRequests.findFirst({
+    where: eq(pullRequests.id, comment.pullRequestId),
+    columns: { baseRepoId: true },
+  });
+  if (!commentPr || !(await getPrRepoAccess(commentPr.baseRepoId, user.id))) {
+    return c.json({ error: "Comment not found" }, 404);
+  }
+
   const existing = await db.query.prReactions.findFirst({
     where: and(eq(prReactions.commentId, id), eq(prReactions.userId, user.id), eq(prReactions.emoji, body.emoji)),
   });
@@ -1365,7 +1543,7 @@ app.post("/api/pulls/comments/:id/reactions", requireAuth, async (c) => {
       commentId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });

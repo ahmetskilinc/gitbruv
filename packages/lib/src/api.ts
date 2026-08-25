@@ -33,7 +33,7 @@ export interface ApiClientConfig {
 }
 
 export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "settings"> & {
-  settings: Omit<ApiClient["settings"], "updateAvatar" | "deleteAvatar">;
+  settings: Omit<ApiClient["settings"], "updateAvatar">;
 } {
   const { baseUrl, getAuthHeaders, fetchOptions = {} } = config;
 
@@ -191,6 +191,30 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
         apiFetch<{ users: PublicUser[]; hasMore: boolean }>(
           `/api/users/public?sortBy=${sortBy}&limit=${limit}&offset=${offset}`
         ),
+
+      toggleFollow: (username: string) =>
+        apiFetch<{ following: boolean }>(`/api/users/${username}/follow`, { method: "POST" }),
+
+      getFollowInfo: (username: string) =>
+        apiFetch<{ followers: number; following: number; isFollowing: boolean }>(
+          `/api/users/${username}/follow-info`
+        ),
+
+      getFollowers: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/followers${query ? `?${query}` : ""}`);
+      },
+
+      getFollowing: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/following${query ? `?${query}` : ""}`);
+      },
     },
 
     settings: {
@@ -556,6 +580,27 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
         }),
     },
 
+    activity: {
+      getUserActivity: (username: string, options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/users/${username}/activity${query ? `?${query}` : ""}`);
+      },
+
+      getFeed: (options?: { limit?: number; offset?: number }) => {
+        const params = new URLSearchParams();
+        if (options?.limit) params.set("limit", String(options.limit));
+        if (options?.offset) params.set("offset", String(options.offset));
+        const query = params.toString();
+        return apiFetch<any>(`/api/activity/feed${query ? `?${query}` : ""}`);
+      },
+
+      getContributions: (username: string, days?: number) =>
+        apiFetch<any>(`/api/users/${username}/contributions${days ? `?days=${days}` : ""}`),
+    },
+
     discussions: {
       list: (owner: string, repo: string, options?: { category?: string; limit?: number; offset?: number }) => {
         const params = new URLSearchParams();
@@ -676,6 +721,70 @@ export function createApiClient(config: ApiClientConfig): Omit<ApiClient, "setti
 
       deleteItem: (itemId: string) =>
         apiFetch<{ success: boolean }>(`/api/projects/items/${itemId}`, {
+          method: "DELETE",
+        }),
+    },
+
+    milestones: {
+      list: (owner: string, repo: string, state: "open" | "closed" = "open") =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/milestones?state=${state}`),
+
+      create: (owner: string, repo: string, data: { title: string; description?: string; dueOn?: string }) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/milestones`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+
+      update: (
+        id: string,
+        data: { title?: string; description?: string; state?: string; dueOn?: string | null }
+      ) =>
+        apiFetch<{ success: boolean }>(`/api/milestones/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      delete: (id: string) =>
+        apiFetch<{ success: boolean }>(`/api/milestones/${id}`, {
+          method: "DELETE",
+        }),
+    },
+
+    releases: {
+      list: (owner: string, repo: string) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases`),
+
+      get: (owner: string, repo: string, tag: string) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases/${encodeURIComponent(tag)}`),
+
+      create: (
+        owner: string,
+        repo: string,
+        data: {
+          tagName: string;
+          targetCommitish?: string;
+          name?: string;
+          body?: string;
+          isDraft?: boolean;
+          isPrerelease?: boolean;
+        }
+      ) =>
+        apiFetch<any>(`/api/repositories/${owner}/${repo}/releases`, {
+          method: "POST",
+          body: JSON.stringify(data),
+        }),
+
+      update: (
+        id: string,
+        data: { name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }
+      ) =>
+        apiFetch<{ success: boolean }>(`/api/releases/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        }),
+
+      delete: (id: string) =>
+        apiFetch<{ success: boolean }>(`/api/releases/${id}`, {
           method: "DELETE",
         }),
     },

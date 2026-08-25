@@ -10,10 +10,23 @@ import {
 } from "@gitbruv/db";
 import { eq, sql, and, desc } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
+import { notifyResource, resolveMentions } from "./notifications";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
 app.use("*", authMiddleware);
+
+// Resolve the owner username + repo name for building notification links.
+async function getRepoContext(repositoryId: string): Promise<{ ownerUsername: string; name: string } | null> {
+  const [row] = await db
+    .select({ ownerUsername: users.username, name: repositories.name })
+    .from(repositories)
+    .innerJoin(users, eq(users.id, repositories.ownerId))
+    .where(eq(repositories.id, repositoryId))
+    .limit(1);
+  return row ?? null;
+}
 
 const VALID_EMOJIS = ["+1", "-1", "laugh", "hooray", "confused", "heart", "rocket", "eyes"];
 
@@ -37,6 +50,19 @@ async function getRepoAndCheckAccess(owner: string, name: string, userId?: strin
   }
 
   return { repoId: row.id, ownerId: row.ownerId };
+}
+
+// Enforce read access to the repo that owns a discussion (private repos are
+// only visible to their owner). Returns the repo row, or null if not found /
+// not permitted. Callers should 404 on null to avoid leaking existence.
+async function getDiscussionRepoAccess(repositoryId: string, userId?: string) {
+  const repo = await db.query.repositories.findFirst({
+    where: eq(repositories.id, repositoryId),
+    columns: { id: true, ownerId: true, visibility: true },
+  });
+  if (!repo) return null;
+  if (repo.visibility === "private" && userId !== repo.ownerId) return null;
+  return repo;
 }
 
 async function getDiscussionReactionsGrouped(discussionId: string, userId?: string) {
@@ -272,6 +298,15 @@ app.post("/api/repositories/:owner/:name/discussions", requireAuth, async (c) =>
     })
     .returning();
 
+  recordActivity({
+    actorId: user.id,
+    repositoryId: repoAccess.repoId,
+    type: "discussion_created",
+    payload: { number: inserted.number, title: inserted.title },
+    targetType: "discussion",
+    targetId: inserted.id,
+  });
+
   const enriched = await enrichDiscussion(inserted, user.id);
   return c.json(enriched);
 });
@@ -400,6 +435,10 @@ app.get("/api/discussions/:id/comments", async (c) => {
     return c.json({ error: "Discussion not found" }, 404);
   }
 
+  if (!(await getDiscussionRepoAccess(discussion.repositoryId, currentUser?.id))) {
+    return c.json({ error: "Discussion not found" }, 404);
+  }
+
   const comments = await db
     .select()
     .from(discussionComments)
@@ -448,6 +487,10 @@ app.post("/api/discussions/:id/comments", requireAuth, async (c) => {
     return c.json({ error: "Discussion not found" }, 404);
   }
 
+  if (!(await getDiscussionRepoAccess(discussion.repositoryId, user.id))) {
+    return c.json({ error: "Discussion not found" }, 404);
+  }
+
   if (discussion.isLocked) {
     return c.json({ error: "Discussion is locked" }, 403);
   }
@@ -461,6 +504,25 @@ app.post("/api/discussions/:id/comments", requireAuth, async (c) => {
       parentId: body.parentId || null,
     })
     .returning();
+
+  // Notify the discussion author and anyone @-mentioned in the reply.
+  const ctx = await getRepoContext(discussion.repositoryId);
+  if (ctx) {
+    const mentioned = await resolveMentions(body.body);
+    await notifyResource({
+      recipientIds: [discussion.authorId, ...mentioned],
+      actorId: user.id,
+      type: "discussion_reply",
+      title: `${user.username} replied to #${discussion.number}: ${discussion.title}`,
+      body: body.body.slice(0, 200),
+      resourceType: "discussion",
+      resourceId: discussion.id,
+      repoOwner: ctx.ownerUsername,
+      repoName: ctx.name,
+      resourceNumber: discussion.number,
+      sendEmail: true,
+    });
+  }
 
   return c.json({
     id: inserted.id,
@@ -547,6 +609,10 @@ app.post("/api/discussions/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Discussion not found" }, 404);
   }
 
+  if (!(await getDiscussionRepoAccess(discussion.repositoryId, user.id))) {
+    return c.json({ error: "Discussion not found" }, 404);
+  }
+
   const existing = await db.query.discussionReactions.findFirst({
     where: and(
       eq(discussionReactions.discussionId, id),
@@ -563,7 +629,7 @@ app.post("/api/discussions/:id/reactions", requireAuth, async (c) => {
       discussionId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });
@@ -585,6 +651,14 @@ app.post("/api/discussions/comments/:id/reactions", requireAuth, async (c) => {
     return c.json({ error: "Comment not found" }, 404);
   }
 
+  const commentDiscussion = await db.query.discussions.findFirst({
+    where: eq(discussions.id, comment.discussionId),
+    columns: { repositoryId: true },
+  });
+  if (!commentDiscussion || !(await getDiscussionRepoAccess(commentDiscussion.repositoryId, user.id))) {
+    return c.json({ error: "Comment not found" }, 404);
+  }
+
   const existing = await db.query.discussionReactions.findFirst({
     where: and(
       eq(discussionReactions.commentId, id),
@@ -601,7 +675,7 @@ app.post("/api/discussions/comments/:id/reactions", requireAuth, async (c) => {
       commentId: id,
       userId: user.id,
       emoji: body.emoji,
-    });
+    }).onConflictDoNothing();
     return c.json({ added: true });
   }
 });

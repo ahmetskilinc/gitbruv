@@ -12,15 +12,27 @@ export const getRedis = async (): Promise<RedisClientType | null> => {
     return redis;
   }
 
-  redis = createClient({
+  const client = createClient({
     url: config.redisUrl,
   });
 
-  try {
-    await redis.connect();
+  // node-redis emits 'error' on socket drops even after a successful connect.
+  // Without a listener an unhandled 'error' event throws and can crash the
+  // process, so always attach one. The client auto-reconnects on its own.
+  client.on("error", (error) => {
+    console.error(
+      "[API] Redis client error:",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  });
 
+  try {
+    await client.connect();
+    redis = client;
   } catch (error) {
     console.error("[API] Failed to connect to Redis:", error instanceof Error ? error.message : "Unknown error");
+    // Leave redis null so a later call retries the connection instead of being
+    // permanently disabled after one transient boot-time failure.
     redis = null;
   }
 

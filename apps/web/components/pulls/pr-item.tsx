@@ -1,29 +1,37 @@
-import { Link } from "@tanstack/react-router";
-import { timeAgo } from "@gitbruv/lib";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Comment01Icon, GitBranchIcon, GitMergeIcon } from "@hugeicons-pro/core-stroke-standard";
-import type { PullRequest } from "@gitbruv/hooks";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PRStateBadge } from "./pr-state-badge";
-import { LabelBadge } from "@/components/issues/label-badge";
+"use client"
 
-interface PRItemProps {
-  pullRequest: PullRequest;
-  username: string;
-  repo: string;
+import Link from "next/link"
+import { RiChat1Line, RiGitBranchLine, RiGitMergeLine } from "@remixicon/react"
+
+import type { PullRequest } from "@gitbruv/hooks"
+import { timeAgo } from "@gitbruv/lib"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PRStateBadge } from "./pr-state-badge"
+import { LabelBadge } from "./pickers"
+
+type PRItemProps = {
+  pullRequest: PullRequest
+  username: string
+  repo: string
 }
 
 export function PRItem({ pullRequest, username, repo }: PRItemProps) {
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-b-0 hover:bg-secondary/30 transition-colors">
-      <PRStateBadge state={pullRequest.state} merged={pullRequest.merged} className="mt-0.5 shrink-0" />
+  const prHref = `/${username}/${repo}/pulls/${pullRequest.number}`
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-2 flex-wrap">
+  return (
+    <div className="flex items-start gap-3 border-b border-border px-4 py-3 transition-colors duration-100 last:border-b-0 hover:bg-muted/30 motion-reduce:transition-none">
+      <PRStateBadge
+        state={pullRequest.state}
+        merged={pullRequest.merged}
+        isDraft={pullRequest.isDraft}
+        className="mt-0.5 shrink-0"
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start gap-2">
           <Link
-            to="/$username/$repo/pulls/$number"
-            params={{ username, repo, number: String(pullRequest.number) }}
-            className="font-semibold text-foreground hover:text-primary transition-colors"
+            href={prHref}
+            className="font-semibold text-foreground transition-colors duration-100 hover:text-primary motion-reduce:transition-none"
           >
             {pullRequest.title}
           </Link>
@@ -32,35 +40,34 @@ export function PRItem({ pullRequest, username, repo }: PRItemProps) {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <span>#{pullRequest.number}</span>
           <span>opened {timeAgo(pullRequest.createdAt)}</span>
           <span>by</span>
           <Link
-            to="/$username"
-            params={{ username: pullRequest.author.username }}
-            className="hover:text-foreground transition-colors"
+            href={`/${pullRequest.author.username}`}
+            className="transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
           >
             {pullRequest.author.username}
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground font-mono">
-          <HugeiconsIcon icon={GitBranchIcon} strokeWidth={2} className="size-3" />
+        <div className="mt-1 flex items-center gap-1 font-mono text-xs text-muted-foreground">
+          <RiGitBranchLine className="size-3" />
           <span>{pullRequest.headBranch}</span>
-          <HugeiconsIcon icon={GitMergeIcon} strokeWidth={2} className="size-3 mx-1" />
+          <RiGitMergeLine className="mx-1 size-3" />
           <span>{pullRequest.baseBranch}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex shrink-0 items-center gap-3">
         {pullRequest.reviews.length > 0 && (
           <div className="flex items-center gap-1">
             {pullRequest.reviews.some((r) => r.state === "approved") && (
-              <span className="text-xs text-green-600 dark:text-green-400">Approved</span>
+              <span className="text-xs text-emerald-500">Approved</span>
             )}
             {pullRequest.reviews.some((r) => r.state === "changes_requested") && (
-              <span className="text-xs text-red-600 dark:text-red-400">Changes requested</span>
+              <span className="text-xs text-red-500">Changes requested</span>
             )}
           </div>
         )}
@@ -68,13 +75,15 @@ export function PRItem({ pullRequest, username, repo }: PRItemProps) {
         {pullRequest.assignees.length > 0 && (
           <div className="flex -space-x-1.5">
             {pullRequest.assignees.slice(0, 3).map((assignee) => (
-              <Avatar key={assignee.id} className="h-5 w-5 border-2 border-background">
+              <Avatar key={assignee.id} className="size-5 border-2 border-background">
                 <AvatarImage src={assignee.avatarUrl || undefined} />
-                <AvatarFallback className="text-[10px]">{assignee.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-[10px]">
+                  {assignee.name.charAt(0)}
+                </AvatarFallback>
               </Avatar>
             ))}
             {pullRequest.assignees.length > 3 && (
-              <span className="flex items-center justify-center h-5 w-5 bg-secondary text-[10px] font-medium border-2 border-background">
+              <span className="flex size-5 items-center justify-center rounded-full border-2 border-background bg-secondary text-[10px] font-medium">
                 +{pullRequest.assignees.length - 3}
               </span>
             )}
@@ -83,15 +92,14 @@ export function PRItem({ pullRequest, username, repo }: PRItemProps) {
 
         {pullRequest.commentCount > 0 && (
           <Link
-            to="/$username/$repo/pulls/$number"
-            params={{ username, repo, number: String(pullRequest.number) }}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            href={prHref}
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors duration-100 hover:text-foreground motion-reduce:transition-none"
           >
-            <HugeiconsIcon icon={Comment01Icon} strokeWidth={2} className="size-3.5" />
+            <RiChat1Line className="size-3.5" />
             <span>{pullRequest.commentCount}</span>
           </Link>
         )}
       </div>
     </div>
-  );
+  )
 }

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db, users, repositories, stars, repoBranchMetadata } from "@gitbruv/db";
 import { eq, sql, and } from "drizzle-orm";
 import { authMiddleware, type AuthVariables } from "../middleware/auth";
+import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
 import {
   createGitStore,
   listBranchesCached,
@@ -148,8 +149,8 @@ app.get("/api/repositories/:owner/:name/commits", async (c) => {
   const name = c.req.param("name");
   const currentUser = c.get("user");
   const branch = c.req.query("branch") || "main";
-  const limit = parseInt(c.req.query("limit") || "30", 10);
-  const skip = parseInt(c.req.query("skip") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 30);
+  const skip = parseOffset(c.req.query("skip"));
 
   const result = await getRepoAndStore(owner, name);
   if (!result) {

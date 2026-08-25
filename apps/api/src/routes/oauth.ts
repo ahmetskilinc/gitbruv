@@ -4,6 +4,30 @@ import { Hono } from 'hono';
 
 const app = new Hono();
 
+/** Escape a string for safe interpolation into HTML text/attribute context. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Return the URL only if it is a safe http(s) link, else null. */
+function safeHttpUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
+  } catch {
+    // not a valid absolute URL
+  }
+  return null;
+}
+
 app.get('/oauth/consent', async (c) => {
   try {
     const query = c.req.query();
@@ -97,9 +121,14 @@ app.get('/oauth/consent', async (c) => {
         <div class="card">
           <div class="client-info">
             <h1>Authorize Application</h1>
-            <div class="client-name">${client.name || 'Unknown Application'}</div>
+            <div class="client-name">${escapeHtml(client.name || 'Unknown Application')}</div>
             <p>would like permission to access your account</p>
-            ${client.uri ? `<p><a href="${client.uri}" target="_blank">${client.uri}</a></p>` : ''}
+            ${(() => {
+              const uri = safeHttpUrl(client.uri);
+              return uri
+                ? `<p><a href="${escapeHtml(uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(uri)}</a></p>`
+                : '';
+            })()}
           </div>
 
           <div class="scopes">
@@ -109,8 +138,8 @@ app.get('/oauth/consent', async (c) => {
               .map(
                 (s) => `
               <div class="scope-item">
-                <strong>${getScopeDisplayName(s)}</strong>
-                <p>${getScopeDescription(s)}</p>
+                <strong>${escapeHtml(getScopeDisplayName(s))}</strong>
+                <p>${escapeHtml(getScopeDescription(s))}</p>
               </div>
             `,
               )

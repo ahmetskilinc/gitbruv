@@ -27,6 +27,8 @@ export type UserPreferences = {
   language?: string;
   showEmail?: boolean;
   wordWrap?: boolean;
+  /** Show anonymized private activity counts in the public contribution graph. */
+  includePrivateContributions?: boolean;
 };
 
 export const users = pgTable('users', {
@@ -120,6 +122,9 @@ export const repositories = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
+    // One repo name per owner, and this also serves the hot owner+name lookup
+    // used by every repo/file/git route (previously an unindexed seq scan).
+    uniqueIndex('repositories_owner_name_unique').on(table.ownerId, table.name),
     index('repositories_forked_from_id_idx').on(table.forkedFromId),
     index('repositories_search_idx').using('gin', table.searchVector),
   ],
@@ -146,8 +151,9 @@ export const repoBranchMetadata = pgTable(
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
+    // The composite PK (repoId, branch) already serves repoId-prefix lookups,
+    // so a separate repoId index would be redundant.
     primaryKey({ columns: [table.repoId, table.branch] }),
-    index('repo_branch_metadata_repo_id_idx').on(table.repoId),
   ],
 );
 
@@ -185,7 +191,64 @@ export const stars = pgTable(
       .references(() => repositories.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.repositoryId] })],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.repositoryId] }),
+    // The PK only serves userId-leading lookups; star counts filter by
+    // repositoryId, so index it to avoid seq scans on repo pages/listings.
+    index('stars_repository_id_idx').on(table.repositoryId),
+  ],
+);
+
+export const milestones = pgTable(
+  'milestones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    number: integer('number').notNull(),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    state: text('state', { enum: ['open', 'closed'] })
+      .notNull()
+      .default('open'),
+    dueOn: timestamp('due_on'),
+    closedAt: timestamp('closed_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('milestones_repository_id_idx').on(table.repositoryId),
+    uniqueIndex('milestones_repository_number_unique').on(table.repositoryId, table.number),
+  ],
+);
+
+export const releases = pgTable(
+  'releases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    tagName: text('tag_name').notNull(),
+    // The branch or commit the tag was created from.
+    targetCommitish: text('target_commitish').notNull(),
+    // The resolved commit OID the tag points at (set when the tag ref is written).
+    commitOid: text('commit_oid'),
+    name: text('name'),
+    body: text('body'),
+    isDraft: boolean('is_draft').notNull().default(false),
+    isPrerelease: boolean('is_prerelease').notNull().default(false),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    publishedAt: timestamp('published_at'),
+  },
+  (table) => [
+    index('releases_repository_id_idx').on(table.repositoryId),
+    uniqueIndex('releases_repository_tag_unique').on(table.repositoryId, table.tagName),
+  ],
 );
 
 export const issues = pgTable(
@@ -199,6 +262,7 @@ export const issues = pgTable(
     authorId: text('author_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     body: text('body'),
     state: text('state', { enum: ['open', 'closed'] })
@@ -206,14 +270,17 @@ export const issues = pgTable(
       .default('open'),
     locked: boolean('locked').notNull().default(false),
     closedAt: timestamp('closed_at'),
-    closedById: text('closed_by_id').references(() => users.id),
+    closedById: text('closed_by_id').references(() => users.id, { onDelete: 'set null' }),
     searchVector: tsvector('search_vector'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
     index('issues_repository_id_idx').on(table.repositoryId),
-    index('issues_repository_number_idx').on(table.repositoryId, table.number),
+    // Enforce unique issue numbers per repo so concurrent creates can't collide
+    // (the app assigns numbers with MAX(number)+1 and relies on this).
+    uniqueIndex('issues_repository_number_unique').on(table.repositoryId, table.number),
+    index('issues_milestone_id_idx').on(table.milestoneId),
     index('issues_search_idx').using('gin', table.searchVector),
   ],
 );
@@ -230,7 +297,10 @@ export const labels = pgTable(
     color: text('color').notNull().default('6b7280'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (table) => [index('labels_repository_id_idx').on(table.repositoryId)],
+  (table) => [
+    // Unique label names per repo (also serves name lookups).
+    uniqueIndex('labels_repository_name_unique').on(table.repositoryId, table.name),
+  ],
 );
 
 export const issueLabels = pgTable(
@@ -292,6 +362,18 @@ export const issueReactions = pgTable(
   (table) => [
     index('issue_reactions_issue_id_idx').on(table.issueId),
     index('issue_reactions_comment_id_idx').on(table.commentId),
+    // Exactly one target (issue or comment), and one reaction per user/emoji
+    // per target so double-taps can't create duplicate rows.
+    check(
+      'issue_reactions_target_check',
+      sql`num_nonnulls(${table.issueId}, ${table.commentId}) = 1`
+    ),
+    uniqueIndex('issue_reactions_issue_user_emoji_unique')
+      .on(table.userId, table.issueId, table.emoji)
+      .where(sql`${table.issueId} is not null`),
+    uniqueIndex('issue_reactions_comment_user_emoji_unique')
+      .on(table.userId, table.commentId, table.emoji)
+      .where(sql`${table.commentId} is not null`),
   ],
 );
 
@@ -332,6 +414,7 @@ export const pullRequests = pgTable(
     authorId: text('author_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    milestoneId: uuid('milestone_id').references(() => milestones.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     body: text('body'),
     state: text('state', { enum: ['open', 'closed', 'merged'] })
@@ -340,27 +423,27 @@ export const pullRequests = pgTable(
     isDraft: boolean('is_draft').notNull().default(false),
     headRepoId: uuid('head_repo_id')
       .notNull()
-      .references(() => repositories.id),
+      .references(() => repositories.id, { onDelete: 'cascade' }),
     headBranch: text('head_branch').notNull(),
     headOid: text('head_oid').notNull(),
     baseRepoId: uuid('base_repo_id')
       .notNull()
-      .references(() => repositories.id),
+      .references(() => repositories.id, { onDelete: 'cascade' }),
     baseBranch: text('base_branch').notNull(),
     baseOid: text('base_oid').notNull(),
     merged: boolean('merged').notNull().default(false),
     mergedAt: timestamp('merged_at'),
-    mergedById: text('merged_by_id').references(() => users.id),
+    mergedById: text('merged_by_id').references(() => users.id, { onDelete: 'set null' }),
     mergeCommitOid: text('merge_commit_oid'),
     closedAt: timestamp('closed_at'),
-    closedById: text('closed_by_id').references(() => users.id),
+    closedById: text('closed_by_id').references(() => users.id, { onDelete: 'set null' }),
     searchVector: tsvector('search_vector'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
     index('pull_requests_repository_id_idx').on(table.repositoryId),
-    index('pull_requests_repository_number_idx').on(table.repositoryId, table.number),
+    uniqueIndex('pull_requests_repository_number_unique').on(table.repositoryId, table.number),
     index('pull_requests_head_repo_id_idx').on(table.headRepoId),
     index('pull_requests_base_repo_id_idx').on(table.baseRepoId),
     index('pull_requests_search_idx').using('gin', table.searchVector),
@@ -468,6 +551,16 @@ export const prReactions = pgTable(
   (table) => [
     index('pr_reactions_pull_request_id_idx').on(table.pullRequestId),
     index('pr_reactions_comment_id_idx').on(table.commentId),
+    check(
+      'pr_reactions_target_check',
+      sql`num_nonnulls(${table.pullRequestId}, ${table.commentId}) = 1`
+    ),
+    uniqueIndex('pr_reactions_pr_user_emoji_unique')
+      .on(table.userId, table.pullRequestId, table.emoji)
+      .where(sql`${table.pullRequestId} is not null`),
+    uniqueIndex('pr_reactions_comment_user_emoji_unique')
+      .on(table.userId, table.commentId, table.emoji)
+      .where(sql`${table.commentId} is not null`),
   ],
 );
 
@@ -512,7 +605,7 @@ export const discussions = pgTable(
   },
   (table) => [
     index('discussions_repo_id_idx').on(table.repositoryId),
-    index('discussions_repo_number_idx').on(table.repositoryId, table.number),
+    uniqueIndex('discussions_repo_number_unique').on(table.repositoryId, table.number),
     index('discussions_search_idx').using('gin', table.searchVector),
   ],
 );
@@ -554,6 +647,16 @@ export const discussionReactions = pgTable(
   (table) => [
     index('discussion_reactions_discussion_id_idx').on(table.discussionId),
     index('discussion_reactions_comment_id_idx').on(table.commentId),
+    check(
+      'discussion_reactions_target_check',
+      sql`num_nonnulls(${table.discussionId}, ${table.commentId}) = 1`
+    ),
+    uniqueIndex('discussion_reactions_discussion_user_emoji_unique')
+      .on(table.userId, table.discussionId, table.emoji)
+      .where(sql`${table.discussionId} is not null`),
+    uniqueIndex('discussion_reactions_comment_user_emoji_unique')
+      .on(table.userId, table.commentId, table.emoji)
+      .where(sql`${table.commentId} is not null`),
   ],
 );
 
@@ -738,6 +841,84 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
   actor: one(users, {
     fields: [notifications.actorId],
     references: [users.id],
+  }),
+}));
+
+export type ActivityPayload = {
+  branch?: string;
+  commitCount?: number;
+  commitCountCapped?: boolean;
+  oldOid?: string;
+  newOid?: string;
+  /** Issue / PR / discussion number. */
+  number?: number;
+  /** Issue / PR / discussion / release title. */
+  title?: string;
+  tagName?: string;
+  /** Review state: approved / changes_requested / commented. */
+  state?: string;
+  forkedFromOwner?: string;
+  forkedFromName?: string;
+};
+
+export const activities = pgTable(
+  'activities',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    actorId: text('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    repositoryId: uuid('repository_id')
+      .notNull()
+      .references(() => repositories.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    payload: jsonb('payload').$type<ActivityPayload>(),
+    targetType: text('target_type'),
+    targetId: uuid('target_id'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    index('activities_actor_created_idx').on(table.actorId, table.createdAt.desc()),
+    index('activities_repo_created_idx').on(table.repositoryId, table.createdAt.desc()),
+  ],
+);
+
+export const follows = pgTable(
+  'follows',
+  {
+    followerId: text('follower_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followingId: text('following_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.followerId, table.followingId] }),
+    index('follows_following_idx').on(table.followingId),
+  ],
+);
+
+export const followRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+  }),
+}));
+
+export const activityRelations = relations(activities, ({ one }) => ({
+  actor: one(users, {
+    fields: [activities.actorId],
+    references: [users.id],
+  }),
+  repository: one(repositories, {
+    fields: [activities.repositoryId],
+    references: [repositories.id],
   }),
 }));
 

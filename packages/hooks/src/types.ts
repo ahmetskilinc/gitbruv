@@ -128,6 +128,63 @@ export type UserPreferences = {
   language?: string;
   showEmail?: boolean;
   wordWrap?: boolean;
+  includePrivateContributions?: boolean;
+};
+
+export type ActivityActor = {
+  id: string;
+  username: string;
+  name: string;
+  avatarUrl: string | null;
+};
+
+export type ActivityRepo = {
+  id: string;
+  owner: string;
+  name: string;
+  visibility: "public" | "private";
+};
+
+export type ActivityPayload = {
+  branch?: string;
+  commitCount?: number;
+  commitCountCapped?: boolean;
+  oldOid?: string;
+  newOid?: string;
+  number?: number;
+  title?: string;
+  tagName?: string;
+  state?: string;
+  forkedFromOwner?: string;
+  forkedFromName?: string;
+};
+
+export type Activity = {
+  id: string;
+  type: string;
+  actor: ActivityActor;
+  repo: ActivityRepo;
+  payload: ActivityPayload | null;
+  createdAt: string;
+};
+
+export type ContributionDay = {
+  date: string;
+  count: number;
+};
+
+export type FollowInfo = {
+  followers: number;
+  following: number;
+  isFollowing: boolean;
+};
+
+export type FollowUser = {
+  id: string;
+  username: string;
+  name: string;
+  avatarUrl: string | null;
+  bio: string | null;
 };
 
 export type UserProfile = {
@@ -162,6 +219,10 @@ export type PublicUser = {
   username: string;
   avatarUrl: string | null;
   bio: string | null;
+  location?: string | null;
+  company?: string | null;
+  website?: string | null;
+  lastActiveAt?: string | null;
   createdAt: string;
   repoCount: number;
 };
@@ -381,6 +442,10 @@ export type ApiClient = {
     getStarred: (username: string) => Promise<{ repos: RepositoryWithStars[] }>;
     getAvatarByUsername: (username: string) => Promise<{ avatarUrl: string | null }>;
     getPublic: (sortBy: "newest" | "oldest", limit: number, offset: number) => Promise<{ users: PublicUser[]; hasMore: boolean }>;
+    toggleFollow: (username: string) => Promise<{ following: boolean }>;
+    getFollowInfo: (username: string) => Promise<FollowInfo>;
+    getFollowers: (username: string, options?: { limit?: number; offset?: number }) => Promise<{ users: FollowUser[]; hasMore: boolean }>;
+    getFollowing: (username: string, options?: { limit?: number; offset?: number }) => Promise<{ users: FollowUser[]; hasMore: boolean }>;
   };
   settings: {
     getCurrentUser: () => Promise<{ user: UserProfile }>;
@@ -474,6 +539,11 @@ export type ApiClient = {
     markAllRead: () => Promise<{ success: boolean }>;
     delete: (id: string) => Promise<{ success: boolean }>;
   };
+  activity: {
+    getUserActivity: (username: string, options?: { limit?: number; offset?: number }) => Promise<{ activities: Activity[]; hasMore: boolean }>;
+    getFeed: (options?: { limit?: number; offset?: number }) => Promise<{ activities: Activity[]; hasMore: boolean }>;
+    getContributions: (username: string, days?: number) => Promise<{ contributions: ContributionDay[]; total: number }>;
+  };
   discussions: {
     list: (owner: string, repo: string, options?: { category?: string; limit?: number; offset?: number }) => Promise<{ discussions: Discussion[]; hasMore: boolean }>;
     get: (owner: string, repo: string, number: number) => Promise<Discussion>;
@@ -501,6 +571,54 @@ export type ApiClient = {
     reorderItems: (items: { id: string; columnId: string; position: number }[]) => Promise<{ success: boolean }>;
     deleteItem: (itemId: string) => Promise<{ success: boolean }>;
   };
+  milestones: {
+    list: (owner: string, repo: string, state?: "open" | "closed") => Promise<{ milestones: Milestone[] }>;
+    create: (owner: string, repo: string, data: { title: string; description?: string; dueOn?: string }) => Promise<Milestone>;
+    update: (id: string, data: { title?: string; description?: string; state?: string; dueOn?: string | null }) => Promise<{ success: boolean }>;
+    delete: (id: string) => Promise<{ success: boolean }>;
+  };
+  releases: {
+    list: (owner: string, repo: string) => Promise<{ releases: Release[] }>;
+    get: (owner: string, repo: string, tag: string) => Promise<Release>;
+    create: (
+      owner: string,
+      repo: string,
+      data: { tagName: string; targetCommitish?: string; name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }
+    ) => Promise<Release>;
+    update: (id: string, data: { name?: string; body?: string; isDraft?: boolean; isPrerelease?: boolean }) => Promise<{ success: boolean }>;
+    delete: (id: string) => Promise<{ success: boolean }>;
+  };
+};
+
+export type Milestone = {
+  id: string;
+  number: number;
+  repositoryId: string;
+  title: string;
+  description: string | null;
+  state: "open" | "closed";
+  dueOn: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  openIssues: number;
+  closedIssues: number;
+};
+
+export type Release = {
+  id: string;
+  repositoryId: string;
+  tagName: string;
+  targetCommitish: string;
+  commitOid: string | null;
+  name: string | null;
+  body: string | null;
+  isDraft: boolean;
+  isPrerelease: boolean;
+  authorId: string;
+  createdAt: string;
+  publishedAt: string | null;
+  author?: { id: string; username: string; name: string; avatarUrl: string | null } | null;
 };
 
 export type SearchResultType = "repository" | "issue" | "pull_request" | "user";

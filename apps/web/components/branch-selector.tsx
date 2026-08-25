@@ -1,35 +1,41 @@
-import { ArrowDown01Icon, CheckmarkCircleIcon, GitBranchIcon } from "@hugeicons-pro/core-stroke-standard";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { useLocation, useNavigate } from "@tanstack/react-router";
-import { buttonVariants } from "./ui/button";
-import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+"use client"
+
+import { usePathname, useRouter } from "next/navigation"
+import { RiArrowDownSLine, RiCheckLine, RiGitBranchLine } from "@remixicon/react"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 type BranchSelectorProps = {
-  branches: string[];
-  currentBranch: string;
-  defaultBranch: string;
-  username: string;
-  repoName: string;
-};
+  branches: string[]
+  currentBranch: string
+  defaultBranch: string
+  username: string
+  repoName: string
+}
 
-type RouteContext = "root" | "tree" | "blob" | "commits";
+type RouteContext = "root" | "tree" | "blob" | "commits"
 
 function getRouteContext(pathname: string): RouteContext {
-  if (pathname.includes("/tree/")) return "tree";
-  if (pathname.includes("/blob/")) return "blob";
-  if (pathname.includes("/commits/")) return "commits";
-  return "root";
+  if (pathname.includes("/tree/")) return "tree"
+  if (pathname.includes("/blob/")) return "blob"
+  if (pathname.includes("/commits/")) return "commits"
+  return "root"
 }
 
 function getCurrentPath(pathname: string, context: RouteContext): string {
-  if (context === "root" || context === "commits") return "";
+  if (context === "root" || context === "commits") return ""
 
-  const match = pathname.match(/\/(tree|blob)\/[^/]+\/(.+)/);
+  const match = pathname.match(/\/(tree|blob)\/[^/]+\/(.+)/)
   if (match) {
-    return match[2];
+    return decodeURIComponent(match[2])
   }
-  return "";
+  return ""
 }
 
 export function BranchSelector({
@@ -39,87 +45,78 @@ export function BranchSelector({
   username,
   repoName,
 }: BranchSelectorProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname()
+  const router = useRouter()
 
-  const context = getRouteContext(location.pathname);
-  const currentPath = getCurrentPath(location.pathname, context);
+  const context = getRouteContext(pathname)
+  const currentPath = getCurrentPath(pathname, context)
+  const base = `/${username}/${repoName}`
 
   const handleBranchChange = (newBranch: string) => {
-    if (newBranch === currentBranch) return;
+    if (newBranch === currentBranch) return
+    const encodedBranch = encodeURIComponent(newBranch)
 
     switch (context) {
       case "root":
         if (newBranch === defaultBranch) {
-          navigate({
-            to: "/$username/$repo",
-            params: { username, repo: repoName },
-          });
+          router.push(base)
         } else {
-          navigate({
-            to: "/$username/$repo/tree/$",
-            params: { username, repo: repoName, _splat: newBranch },
-          });
+          router.push(`${base}/tree/${encodedBranch}`)
         }
-        break;
+        break
       case "tree":
-        navigate({
-          to: "/$username/$repo/tree/$",
-          params: {
-            username,
-            repo: repoName,
-            _splat: currentPath ? `${newBranch}/${currentPath}` : newBranch,
-          },
-        });
-        break;
+        router.push(
+          `${base}/tree/${encodedBranch}${currentPath ? `/${currentPath}` : ""}`,
+        )
+        break
       case "blob":
-        navigate({
-          to: "/$username/$repo/blob/$",
-          params: {
-            username,
-            repo: repoName,
-            _splat: currentPath ? `${newBranch}/${currentPath}` : newBranch,
-          },
-        });
-        break;
+        router.push(
+          `${base}/blob/${encodedBranch}${currentPath ? `/${currentPath}` : ""}`,
+        )
+        break
       case "commits":
-        navigate({
-          to: "/$username/$repo/commits/$branch",
-          params: { username, repo: repoName, branch: newBranch },
-        });
-        break;
+        router.push(`${base}/commits/${encodedBranch}`)
+        break
     }
-  };
+  }
 
   if (branches.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 border border-border text-sm">
-        <HugeiconsIcon icon={GitBranchIcon} strokeWidth={2} className="size-4 text-primary" />
+      <div className="flex items-center gap-2 rounded-xl border bg-secondary/50 px-3 py-1.5 text-sm">
+        <RiGitBranchLine className="size-4 text-primary" />
         <span className="font-mono">{currentBranch}</span>
       </div>
-    );
+    )
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "default" })}>
-        <HugeiconsIcon icon={GitBranchIcon} strokeWidth={2} className="size-4 text-primary" />
-        <span className="font-mono max-w-[120px] truncate">{currentBranch}</span>
-        <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-3 text-muted-foreground" />
+      <DropdownMenuTrigger
+        className={buttonVariants({ variant: "outline", size: "default" })}
+      >
+        <RiGitBranchLine className="size-4 text-primary" />
+        <span className="max-w-[120px] truncate font-mono">{currentBranch}</span>
+        <RiArrowDownSLine className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[240px]">
-        <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">Switch branch</div>
+        <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">
+          Switch branch
+        </div>
         <div className="max-h-[280px] overflow-y-auto py-1">
           {branches.map((branch: string) => (
             <DropdownMenuItem
               key={branch}
               onClick={() => handleBranchChange(branch)}
-              className={cn("cursor-pointer px-3 py-2 text-sm font-mono", branch === currentBranch && "bg-primary/10")}
+              className={cn(
+                "cursor-pointer px-3 py-2 font-mono text-sm",
+                branch === currentBranch && "bg-primary/10",
+              )}
             >
-              <HugeiconsIcon
-                icon={CheckmarkCircleIcon}
-                strokeWidth={2}
-                className={cn("size-3.5 mr-2", branch === currentBranch ? "opacity-100 text-primary" : "opacity-0")}
+              <RiCheckLine
+                className={cn(
+                  "mr-2 size-3.5",
+                  branch === currentBranch ? "text-primary opacity-100" : "opacity-0",
+                )}
               />
               <span className="truncate">{branch}</span>
             </DropdownMenuItem>
@@ -127,5 +124,5 @@ export function BranchSelector({
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+  )
 }

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db, users, notifications } from "@gitbruv/db";
-import { eq, sql, and, desc } from "drizzle-orm";
+import { eq, sql, and, desc, inArray } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
 import { notifyUser } from "../websocket";
 import { sendNotificationEmail } from "../email";
@@ -137,7 +137,8 @@ export type NotificationType =
   | "pr_merged"
   | "pr_assigned"
   | "mention"
-  | "discussion_reply";
+  | "discussion_reply"
+  | "user_follow";
 
 export type CreateNotificationInput = {
   userId: string;
@@ -203,6 +204,73 @@ export async function createNotification(input: CreateNotificationInput) {
 
 export async function createNotifications(inputs: CreateNotificationInput[]) {
   return Promise.all(inputs.map(createNotification));
+}
+
+type NotifyResourceInput = {
+  /** Candidate recipient user ids; deduped, and the actor is removed. */
+  recipientIds: (string | null | undefined)[];
+  actorId: string;
+  type: NotificationType;
+  title: string;
+  body?: string;
+  resourceType: "issue" | "pull_request" | "discussion";
+  resourceId: string;
+  repoOwner: string;
+  repoName: string;
+  resourceNumber: number;
+  sendEmail?: boolean;
+};
+
+/**
+ * Fan a single event out to multiple recipients. The actor never notifies
+ * themselves, and duplicate recipients collapse to one notification. Failures
+ * are swallowed so a notification problem can never fail the originating
+ * request (notifications are best-effort).
+ */
+export async function notifyResource(input: NotifyResourceInput) {
+  const recipients = [...new Set(input.recipientIds.filter((id): id is string => !!id))].filter(
+    (id) => id !== input.actorId
+  );
+
+  if (recipients.length === 0) return;
+
+  try {
+    await createNotifications(
+      recipients.map((userId) => ({
+        userId,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        actorId: input.actorId,
+        repoOwner: input.repoOwner,
+        repoName: input.repoName,
+        resourceNumber: input.resourceNumber,
+        sendEmail: input.sendEmail,
+      }))
+    );
+  } catch (error) {
+    console.error("[notifications] notifyResource failed:", error);
+  }
+}
+
+/** Extract @username mentions from free text and resolve them to user ids. */
+export async function resolveMentions(text: string | null | undefined): Promise<string[]> {
+  if (!text) return [];
+  const matches = text.match(/(?:^|[^a-zA-Z0-9_])@([a-zA-Z0-9_-]{1,39})/g);
+  if (!matches) return [];
+
+  const usernames = [
+    ...new Set(matches.map((m) => m.slice(m.indexOf("@") + 1).toLowerCase())),
+  ];
+  if (usernames.length === 0) return [];
+
+  const rows = await db.query.users.findMany({
+    where: inArray(sql`lower(${users.username})`, usernames),
+    columns: { id: true },
+  });
+  return rows.map((r) => r.id);
 }
 
 export default app;

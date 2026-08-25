@@ -2,8 +2,10 @@ import { Hono } from "hono";
 import { db, users, repositories, stars, repoBranchMetadata, branchProtectionRules } from "@gitbruv/db";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { authMiddleware, requireAuth, type AuthVariables } from "../middleware/auth";
+import { parseLimit, parseOffset } from "@gitbruv/lib/validation";
 import { putObject, deletePrefix, getRepoPrefix, copyPrefix, listObjects } from "../s3";
 import { repoCache } from "../cache";
+import { recordActivity } from "./activity";
 
 const app = new Hono<{ Variables: AuthVariables }>();
 
@@ -93,6 +95,8 @@ app.post("/api/repositories", requireAuth, async (c) => {
   await putObject(`${repoPrefix}/HEAD`, "ref: refs/heads/main\n");
   await putObject(`${repoPrefix}/config`, "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = true\n");
   await putObject(`${repoPrefix}/description`, "Unnamed repository; edit this file to name the repository.\n");
+
+  recordActivity({ actorId: user.id, repositoryId: repo.id, type: "repo_created" });
 
   return c.json(repo);
 });
@@ -193,7 +197,9 @@ app.post("/api/repositories/:owner/:name/fork", requireAuth, async (c) => {
     .values({
       name: targetName,
       description: ("description" in body ? body.description : source.description) ?? null,
-      visibility: "public",
+      // Inherit the source visibility so forking a private repo doesn't
+      // silently publish its contents.
+      visibility: source.visibility,
       ownerId: user.id,
       forkedFromId: source.id,
     })
@@ -229,6 +235,13 @@ app.post("/api/repositories/:owner/:name/fork", requireAuth, async (c) => {
 
   const forkedFrom = await getForkedFromInfo(source.id, user.id);
 
+  recordActivity({
+    actorId: user.id,
+    repositoryId: forkRepo.id,
+    type: "repo_forked",
+    payload: { forkedFromOwner: source.username, forkedFromName: source.name },
+  });
+
   return c.json({
     repo: {
       id: forkRepo.id,
@@ -256,8 +269,8 @@ app.post("/api/repositories/:owner/:name/fork", requireAuth, async (c) => {
 
 app.get("/api/repositories/public", async (c) => {
   const sortBy = c.req.query("sortBy") || "updated";
-  const limit = parseInt(c.req.query("limit") || "20", 10);
-  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 20);
+  const offset = parseOffset(c.req.query("offset"));
 
   const orderBy =
     sortBy === "stars"
@@ -337,6 +350,7 @@ app.get("/api/repositories/user/:username", async (c) => {
         .select({ count: sql<number>`COUNT(*)` })
         .from(stars)
         .where(eq(stars.repositoryId, repo.id));
+      const forkCount = await getForkCount(repo.id);
 
       return {
         ...repo,
@@ -347,6 +361,7 @@ app.get("/api/repositories/user/:username", async (c) => {
           avatarUrl: userResult.avatarUrl,
         },
         starCount: Number(starCount?.count) || 0,
+        forkCount,
       };
     })
   );
@@ -526,8 +541,8 @@ app.get("/api/repositories/:owner/:name/forks", async (c) => {
   const owner = c.req.param("owner");
   const name = c.req.param("name");
   const currentUser = c.get("user");
-  const limit = parseInt(c.req.query("limit") || "20", 10);
-  const offset = parseInt(c.req.query("offset") || "0", 10);
+  const limit = parseLimit(c.req.query("limit"), 20);
+  const offset = parseOffset(c.req.query("offset"));
 
   const sourceResult = await db
     .select({

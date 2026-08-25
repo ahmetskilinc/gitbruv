@@ -127,14 +127,25 @@ export async function refExists(fs: S3Fs, dir: string, ref: string): Promise<boo
 
     return true;
   } catch (error) {
-    console.error(`[Git] refExists: ${ref} failed:`, error instanceof Error ? error.message : error);
+    // A missing ref is this function's expected `false` case (e.g. an empty
+    // repository with no commits yet) — only log unexpected failures.
+    const isNotFound =
+      error instanceof Error &&
+      (error.name === 'NotFoundError' ||
+        (error as NodeJS.ErrnoException).code === 'NotFoundError');
+    if (!isNotFound) {
+      console.error(`[Git] refExists: ${ref} failed:`, error instanceof Error ? error.message : error);
+    }
     try {
       const refPath = normalizeRef(ref);
       const content = await fs.promises.readFile(refPath, "utf8");
 
       return content.toString().trim().length === 40;
     } catch (readError) {
-      console.error(`[Git] refExists: failed to read ref file:`, readError);
+      const isEnoent = (readError as NodeJS.ErrnoException)?.code === 'ENOENT';
+      if (!isEnoent) {
+        console.error(`[Git] refExists: failed to read ref file:`, readError);
+      }
       return false;
     }
   }
@@ -1303,6 +1314,11 @@ async function copyCommitAndAncestors(
   }
 }
 
+export type MergeResult =
+  | { mergeCommitOid: string }
+  | { conflict: true; reason: string }
+  | null;
+
 export async function performMerge(
   baseStore: GitStore,
   baseBranch: string,
@@ -1311,7 +1327,7 @@ export async function performMerge(
   mergeMessage: string,
   authorName: string,
   authorEmail: string
-): Promise<{ mergeCommitOid: string } | null> {
+): Promise<MergeResult> {
   try {
     console.log(`[Git] performMerge starting: base=${baseBranch}, head=${headBranch}`);
     console.log(`[Git] baseStore: owner=${baseStore.ownerId}, repo=${baseStore.repoName}`);
@@ -1346,10 +1362,33 @@ export async function performMerge(
       console.log("[Git] Successfully copied git objects for cross-repo merge");
     }
 
-    const { commit: headCommit } = await git.readCommit({ 
-      fs: isCrossRepo ? baseStore.fs : headStore.fs, 
-      dir: isCrossRepo ? baseStore.dir : headStore.dir, 
-      oid: headOid 
+    // The merge commit below reuses the head tree verbatim. That is only
+    // correct when the base branch has not advanced past the merge base — i.e.
+    // when base is an ancestor of head (a fast-forward). If base has diverged,
+    // reusing the head tree would silently discard base-only changes, so refuse
+    // and report a conflict instead of corrupting the branch. A real
+    // three-way tree merge is required to handle divergent history.
+    // (After the cross-repo copy above, head's ancestors live in baseStore, so
+    // ancestry can always be checked there.)
+    const baseIsAncestorOfHead = await isAncestor(baseStore.fs, baseStore.dir, baseOid, headOid);
+    if (!baseIsAncestorOfHead) {
+      console.warn(
+        `[Git] Refusing merge: base branch ${baseBranch} has diverged from head; ` +
+          `a three-way merge is required and is not yet supported.`
+      );
+      return {
+        conflict: true,
+        reason:
+          "The base branch has changed since this pull request was opened. " +
+          "Automatic merging of divergent branches is not supported yet; " +
+          "rebase or update the branch and try again.",
+      };
+    }
+
+    const { commit: headCommit } = await git.readCommit({
+      fs: isCrossRepo ? baseStore.fs : headStore.fs,
+      dir: isCrossRepo ? baseStore.dir : headStore.dir,
+      oid: headOid
     });
     const headTreeOid = headCommit.tree;
     console.log(`[Git] Head tree OID: ${headTreeOid}`);
@@ -1402,6 +1441,27 @@ export async function performMerge(
     console.error("[Git] performMerge error:", error);
     return null;
   }
+}
+
+/**
+ * Count commits reachable from newOid but not from oldOid, capped. Used for
+ * "pushed N commits" activity — capped:true means "N+" (or a force-push whose
+ * old tip is no longer an ancestor).
+ */
+export async function countNewCommits(
+  fs: S3Fs,
+  dir: string,
+  oldOid: string,
+  newOid: string,
+  cap = 20
+): Promise<{ count: number; capped: boolean }> {
+  const commits = await git.log({ fs, dir, ref: newOid, depth: cap + 1 });
+  let count = 0;
+  for (const entry of commits) {
+    if (entry.oid === oldOid) return { count, capped: false };
+    count++;
+  }
+  return { count: Math.min(count, cap), capped: true };
 }
 
 export async function isAncestor(

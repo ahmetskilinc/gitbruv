@@ -1,17 +1,20 @@
-import { useState } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading02Icon, Cancel01Icon } from "@hugeicons-pro/core-stroke-standard";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+"use client"
+
+import { useState } from "react"
+import { RiCloseLine } from "@remixicon/react"
+
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+import { Textarea } from "@/components/ui/textarea"
 
 export type InlineCommentFormProps = {
-  onSubmit: (body: string) => Promise<void>;
-  onCancel: () => void;
-  isLoading?: boolean;
-  placeholder?: string;
-  submitLabel?: string;
-  replyTo?: string;
-};
+  onSubmit: (body: string) => Promise<void>
+  onCancel: () => void
+  isLoading?: boolean
+  placeholder?: string
+  submitLabel?: string
+  replyTo?: string
+}
 
 export function InlineCommentForm({
   onSubmit,
@@ -21,22 +24,21 @@ export function InlineCommentForm({
   submitLabel = "Add comment",
   replyTo,
 }: InlineCommentFormProps) {
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState("")
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!body.trim() || isLoading) return;
-    await onSubmit(body);
-    setBody("");
+    e.preventDefault()
+    if (!body.trim() || isLoading) return
+    await onSubmit(body)
+    setBody("")
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 bg-card border border-border space-y-3">
-      {replyTo && (
-        <div className="text-xs text-muted-foreground">
-          Replying to comment
-        </div>
-      )}
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3"
+    >
+      {replyTo && <div className="text-xs text-muted-foreground">Replying to comment</div>}
       <Textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
@@ -46,24 +48,14 @@ export function InlineCommentForm({
         disabled={isLoading}
       />
       <div className="flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4 mr-1" />
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isLoading}>
+          <RiCloseLine className="size-4" />
           Cancel
         </Button>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={!body.trim() || isLoading}
-        >
+        <Button type="submit" size="sm" disabled={!body.trim() || isLoading}>
           {isLoading ? (
             <>
-              <HugeiconsIcon icon={Loading02Icon} strokeWidth={2} className="size-4 mr-1 animate-spin" />
+              <Spinner />
               Submitting...
             </>
           ) : (
@@ -72,5 +64,5 @@ export function InlineCommentForm({
         </Button>
       </div>
     </form>
-  );
+  )
 }

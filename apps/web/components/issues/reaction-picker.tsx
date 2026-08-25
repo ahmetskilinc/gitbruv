@@ -1,7 +1,17 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { ReactionSummary } from "@gitbruv/hooks";
+"use client"
+
+import { RiEmotionLine } from "@remixicon/react"
+import type { ReactionSummary } from "@gitbruv/hooks"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 const REACTIONS = [
   { emoji: "+1", label: "👍" },
@@ -12,34 +22,33 @@ const REACTIONS = [
   { emoji: "heart", label: "❤️" },
   { emoji: "rocket", label: "🚀" },
   { emoji: "eyes", label: "👀" },
-];
+]
 
 function getEmojiLabel(emoji: string): string {
-  return REACTIONS.find((r) => r.emoji === emoji)?.label || emoji;
+  return REACTIONS.find((r) => r.emoji === emoji)?.label || emoji
 }
 
 interface ReactionPickerProps {
-  reactions: ReactionSummary[];
-  onToggle: (emoji: string) => void;
-  disabled?: boolean;
+  reactions: ReactionSummary[]
+  onToggle: (emoji: string) => void
+  disabled?: boolean
 }
 
 export function ReactionPicker({ reactions, onToggle, disabled }: ReactionPickerProps) {
-  const [showPicker, setShowPicker] = useState(false);
-
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex flex-wrap items-center gap-1.5">
       {reactions.map((reaction) => (
         <button
           key={reaction.emoji}
+          type="button"
           onClick={() => onToggle(reaction.emoji)}
           disabled={disabled}
           className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 text-xs border transition-colors",
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors duration-100 motion-reduce:transition-none",
             reaction.reacted
-              ? "bg-primary/10 border-primary/30 text-primary"
-              : "bg-secondary/50 border-border hover:bg-secondary",
-            disabled && "opacity-50 cursor-not-allowed"
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : "border-border bg-secondary/50 hover:bg-secondary",
+            disabled && "cursor-not-allowed opacity-50",
           )}
         >
           <span>{getEmojiLabel(reaction.emoji)}</span>
@@ -47,44 +56,36 @@ export function ReactionPicker({ reactions, onToggle, disabled }: ReactionPicker
         </button>
       ))}
 
-      <div className="relative">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => setShowPicker(!showPicker)}
-          disabled={disabled}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon-sm" disabled={disabled} aria-label="Add reaction" />}
         >
-          <span className="text-sm">😀</span>
-        </Button>
-
-        {showPicker && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-            <div className="absolute left-0 top-full mt-1 z-50 bg-popover border border-border shadow-lg p-2 flex gap-1">
-              {REACTIONS.map((r) => (
-                <button
-                  key={r.emoji}
-                  onClick={() => {
-                    onToggle(r.emoji);
-                    setShowPicker(false);
-                  }}
-                  className="p-1.5 hover:bg-secondary transition-colors text-base"
-                  title={r.emoji}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+          <RiEmotionLine className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuGroup>
+          <DropdownMenuLabel>Add a reaction</DropdownMenuLabel>
+          <div className="grid grid-cols-4 gap-1">
+            {REACTIONS.map((reaction) => (
+              <DropdownMenuItem
+                key={reaction.emoji}
+                aria-label={reaction.emoji}
+                className="justify-center px-2 text-base"
+                onClick={() => onToggle(reaction.emoji)}
+              >
+                <span aria-hidden="true">{reaction.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </div>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
-  );
+  )
 }
 
 export function ReactionDisplay({ reactions }: { reactions: ReactionSummary[] }) {
-  if (reactions.length === 0) return null;
+  if (reactions.length === 0) return null
 
   return (
     <div className="flex items-center gap-1">
@@ -98,5 +99,5 @@ export function ReactionDisplay({ reactions }: { reactions: ReactionSummary[] })
         </span>
       ))}
     </div>
-  );
+  )
 }

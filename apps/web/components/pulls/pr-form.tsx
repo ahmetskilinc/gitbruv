@@ -1,32 +1,43 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { GitBranchIcon, GitMergeIcon, Loading02Icon } from "@hugeicons-pro/core-stroke-standard";
-import type { ForkedFrom } from "@gitbruv/hooks";
+"use client"
 
-interface PRFormProps {
-  branches: string[];
-  upstreamBranches?: string[];
-  defaultBranch: string;
-  forkedFrom?: ForkedFrom | null;
-  currentRepoOwner?: string;
-  currentRepoName?: string;
+import { useState } from "react"
+import { RiGitBranchLine, RiGitMergeLine } from "@remixicon/react"
+
+import type { ForkedFrom } from "@gitbruv/hooks"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
+import { Textarea } from "@/components/ui/textarea"
+
+type PRFormProps = {
+  branches: string[]
+  upstreamBranches?: string[]
+  defaultBranch: string
+  forkedFrom?: ForkedFrom | null
+  currentRepoOwner?: string
+  currentRepoName?: string
   onSubmit: (data: {
-    title: string;
-    body: string;
-    headBranch: string;
-    baseBranch: string;
-    toUpstream?: boolean;
-    isDraft?: boolean;
-  }) => Promise<void>;
-  onCancel: () => void;
-  submitLabel: string;
-  isSubmitting: boolean;
-  initialTitle?: string;
-  initialBody?: string;
+    title: string
+    body: string
+    headBranch: string
+    baseBranch: string
+    toUpstream?: boolean
+    isDraft?: boolean
+  }) => Promise<void>
+  onCancel: () => void
+  submitLabel: string
+  isSubmitting: boolean
+  initialTitle?: string
+  initialBody?: string
 }
 
 export function PRForm({
@@ -43,20 +54,21 @@ export function PRForm({
   initialTitle = "",
   initialBody = "",
 }: PRFormProps) {
-  const [title, setTitle] = useState(initialTitle);
-  const [body, setBody] = useState(initialBody);
-  const [headBranch, setHeadBranch] = useState(branches[0] || "");
-  const [toUpstream, setToUpstream] = useState(!!forkedFrom);
-  const [isDraft, setIsDraft] = useState(false);
+  const [title, setTitle] = useState(initialTitle)
+  const [body, setBody] = useState(initialBody)
+  const [headBranch, setHeadBranch] = useState(branches[0] || "")
+  const [toUpstream, setToUpstream] = useState(!!forkedFrom)
+  const [isDraft, setIsDraft] = useState(false)
   const [baseBranch, setBaseBranch] = useState(
-    toUpstream && upstreamBranches.length > 0 ? upstreamBranches[0] : defaultBranch
-  );
+    toUpstream && upstreamBranches.length > 0 ? upstreamBranches[0] : defaultBranch,
+  )
 
-  const availableBaseBranches = toUpstream && upstreamBranches.length > 0 ? upstreamBranches : branches;
+  const availableBaseBranches =
+    toUpstream && upstreamBranches.length > 0 ? upstreamBranches : branches
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !headBranch || !baseBranch) return;
+    e.preventDefault()
+    if (!title.trim() || !headBranch || !baseBranch) return
 
     await onSubmit({
       title,
@@ -65,135 +77,139 @@ export function PRForm({
       baseBranch,
       toUpstream: toUpstream && !!forkedFrom,
       isDraft,
-    });
-  };
+    })
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {forkedFrom && (
-        <div className="flex items-center gap-4 p-3 bg-blue-500/10 border border-blue-500/20 text-sm">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={toUpstream}
-              onChange={(e) => {
-                setToUpstream(e.target.checked);
-                if (e.target.checked && upstreamBranches.length > 0) {
-                  setBaseBranch(upstreamBranches[0]);
-                } else {
-                  setBaseBranch(defaultBranch);
-                }
-              }}
-              className="rounded"
-            />
-            <span>
-              Contribute to upstream repository{" "}
-              <span className="font-semibold">
-                {forkedFrom.owner.username}/{forkedFrom.name}
+    <form onSubmit={handleSubmit}>
+      <FieldGroup>
+        {forkedFrom && (
+          <div className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/10 p-3 text-sm">
+            <label className="flex cursor-pointer items-center gap-2">
+              <Checkbox
+                checked={toUpstream}
+                onCheckedChange={(checked) => {
+                  const isChecked = checked === true
+                  setToUpstream(isChecked)
+                  if (isChecked && upstreamBranches.length > 0) {
+                    setBaseBranch(upstreamBranches[0])
+                  } else {
+                    setBaseBranch(defaultBranch)
+                  }
+                }}
+              />
+              <span>
+                Contribute to upstream repository{" "}
+                <span className="font-semibold">
+                  {forkedFrom.owner.username}/{forkedFrom.name}
+                </span>
               </span>
-            </span>
-          </label>
-        </div>
-      )}
+            </label>
+          </div>
+        )}
 
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-secondary/30 border border-border">
-        <div className="flex items-center gap-2">
-          <HugeiconsIcon icon={GitBranchIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">base:</span>
-          {toUpstream && forkedFrom && (
-            <span className="text-sm font-mono text-muted-foreground">
-              {forkedFrom.owner.username}/{forkedFrom.name}:
-            </span>
-          )}
-          {!toUpstream && currentRepoOwner && (
-            <span className="text-sm font-mono text-muted-foreground">
-              {currentRepoOwner}/{currentRepoName}:
-            </span>
-          )}
-          <select
-            value={baseBranch}
-            onChange={(e) => setBaseBranch(e.target.value)}
-            className="text-sm font-mono bg-background border border-border px-2 py-1"
-          >
-            {availableBaseBranches.map((branch) => (
-              <option key={branch} value={branch}>
-                {branch}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <HugeiconsIcon icon={GitMergeIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">compare:</span>
-          {currentRepoOwner && (
-            <span className="text-sm font-mono text-muted-foreground">
-              {currentRepoOwner}/{currentRepoName}:
-            </span>
-          )}
-          <select
-            value={headBranch}
-            onChange={(e) => setHeadBranch(e.target.value)}
-            className="text-sm font-mono bg-background border border-border px-2 py-1"
-          >
-            {branches.map((branch) => (
-              <option key={branch} value={branch}>
-                {branch}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          placeholder="Pull request title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="body">Description</Label>
-        <Textarea
-          id="body"
-          placeholder="Add a description..."
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={8}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={isDraft}
-            onChange={(e) => setIsDraft(e.target.checked)}
-            className="rounded"
-          />
-          Create as draft
-        </label>
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting || !title.trim() || !headBranch || !baseBranch}>
-            {isSubmitting ? (
-              <>
-                <HugeiconsIcon icon={Loading02Icon} strokeWidth={2} className="size-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              isDraft ? "Create draft" : submitLabel
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-secondary/30 p-4">
+          <div className="flex items-center gap-2">
+            <RiGitBranchLine className="size-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">base:</span>
+            {toUpstream && forkedFrom && (
+              <span className="font-mono text-sm text-muted-foreground">
+                {forkedFrom.owner.username}/{forkedFrom.name}:
+              </span>
             )}
-          </Button>
+            {!toUpstream && currentRepoOwner && (
+              <span className="font-mono text-sm text-muted-foreground">
+                {currentRepoOwner}/{currentRepoName}:
+              </span>
+            )}
+            <Select
+              value={baseBranch}
+              onValueChange={(value) => setBaseBranch(value as string)}
+            >
+              <SelectTrigger aria-label="Base branch" size="sm" className="font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableBaseBranches.map((branch) => (
+                  <SelectItem key={branch} value={branch}>
+                    {branch}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <RiGitMergeLine className="size-4 text-muted-foreground" />
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">compare:</span>
+            {currentRepoOwner && (
+              <span className="font-mono text-sm text-muted-foreground">
+                {currentRepoOwner}/{currentRepoName}:
+              </span>
+            )}
+            <Select
+              value={headBranch}
+              onValueChange={(value) => setHeadBranch(value as string)}
+            >
+              <SelectTrigger aria-label="Compare branch" size="sm" className="font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch} value={branch}>
+                    {branch}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+
+        <Field>
+          <FieldLabel htmlFor="pr-title">Title</FieldLabel>
+          <Input
+            id="pr-title"
+            placeholder="Pull request title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="pr-body">Description</FieldLabel>
+          <Textarea
+            id="pr-body"
+            placeholder="Add a description..."
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={8}
+          />
+        </Field>
+
+        <div className="flex items-center justify-between">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={isDraft}
+              onCheckedChange={(checked) => setIsDraft(checked === true)}
+            />
+            Create as draft
+          </label>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !title.trim() || !headBranch || !baseBranch}
+            >
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? "Creating..." : isDraft ? "Create draft" : submitLabel}
+            </Button>
+          </div>
+        </div>
+      </FieldGroup>
     </form>
-  );
+  )
 }
